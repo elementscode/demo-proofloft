@@ -1,0 +1,573 @@
+import "./style.css";
+import {
+  AuthError,
+  ForbiddenError,
+  LifecycleEvent,
+  LiveView,
+  NotFoundError,
+  email,
+  sql,
+} from "@elements/app";
+import type { Listener } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import {
+  Comment,
+  Favorite,
+  Gallery,
+  GalleryEvent,
+  GalleryStatus,
+  Photo,
+  comments,
+  favorites,
+  findGalleryByToken,
+  findStudio,
+  formatDate,
+  galleryEvents,
+  isPhotographerOf,
+  listPhotos,
+  plural,
+} from "#app/shared/services/galleries";
+import SelectionsSubmittedEmail from "#app/emails/selections-submitted";
+
+export interface LockedGallery {
+  name: string;
+  eventDate: Date;
+  studio: string;
+}
+
+export interface ClientView {
+  galleryId: string;
+  name: string;
+  eventDate: Date;
+  clientName: string;
+  status: GalleryStatus;
+  submittedAt: Date | null;
+  photographer: string;
+  studio: string;
+  preview: boolean;
+  photos: Photo[];
+  favorites: LiveView<Favorite>;
+  comments: LiveView<Comment>;
+  events: Listener<GalleryEvent>;
+}
+
+type Filter = "all" | "favorites";
+
+interface Ui {
+  filter: Filter;
+  openId: string | null;
+  draft: string;
+  error: string;
+  confirming: boolean;
+  sending: boolean;
+}
+
+interface Access {
+  view: ClientView | null;
+  password: string;
+  error: string;
+  checking: boolean;
+}
+
+/** The gallery a share link opens. A draft is only visible to its photographer, as a preview. */
+export function galleryForLinkOrThrow(token: string): Gallery {
+  let gallery = findGalleryByToken(token);
+
+  if (!gallery || (gallery.status === "draft" && !isPhotographerOf(gallery.id))) {
+    throw new NotFoundError("gallery not found");
+  }
+
+  return gallery;
+}
+
+export function lockedInfo(g: Gallery): LockedGallery {
+  return { name: g.name, eventDate: g.eventDate, studio: findStudio(g.userId).studio };
+}
+
+export function needsPassword(g: Gallery): boolean {
+  return g.hasPassword && !isPhotographerOf(g.id);
+}
+
+export function openClientView(g: Gallery): ClientView {
+  let studio = findStudio(g.userId);
+
+  return {
+    galleryId: g.id,
+    name: g.name,
+    eventDate: g.eventDate,
+    clientName: g.clientName,
+    status: g.status,
+    submittedAt: g.submittedAt,
+    photographer: studio.name,
+    studio: studio.studio,
+    preview: isPhotographerOf(g.id),
+    photos: listPhotos(g.id),
+    favorites: favorites.view({ galleryId: g.id }),
+    comments: comments.view({ galleryId: g.id }),
+    events: galleryEvents.listen({ filter: (e) => e.galleryId === g.id }),
+  };
+}
+
+function checkPasswordOrThrow(g: Gallery, password: string) {
+  let ok = !sql(`
+    select 1 from galleries
+     where id = ${g.id}
+       and passwordHash = crypt(${password}, passwordHash)
+  `).empty();
+
+  if (!ok) {
+    throw new AuthError("That password doesn't match. Check the email from your photographer.");
+  }
+}
+
+/**
+ * Proof the visitor knew the password, kept in a cookie scoped to the gallery.
+ * It is keyed by the password hash, so changing the password revokes it.
+ */
+function grantFor(g: Gallery): string {
+  return sql<{ grant: string }>(`
+    select encode(hmac(shareToken, passwordHash, 'sha256'), 'hex') as grant
+      from galleries where id = ${g.id}
+  `).firstOrThrow().grant ?? "";
+}
+
+export function hasAccess(g: Gallery, grant: string): boolean {
+  return !needsPassword(g) || (grant !== "" && grant === grantFor(g));
+}
+
+export function grantCookie(token: string): string {
+  return `proofloft_${token}`;
+}
+
+/** @rpc */
+export function unlock(token: string, password: string): string {
+  let g = galleryForLinkOrThrow(token);
+  checkPasswordOrThrow(g, password);
+
+  return grantFor(g);
+}
+
+/** @rpc */
+export function submitSelections(token: string, grant: string): GalleryStatus {
+  let g = galleryForLinkOrThrow(token);
+
+  if (!hasAccess(g, grant)) {
+    throw new AuthError("Open the gallery with its password first.");
+  }
+
+  if (g.status === "final") {
+    throw new ForbiddenError("These selections are already final.");
+  }
+
+  let row = sql<{ submittedAt: Date }>(`
+    update galleries set status = 'submitted', submittedAt = now()
+     where id = ${g.id}
+    returning submittedAt
+  `).firstOrThrow();
+
+  let picks = sql<{ name: string }>(`
+    select p.name from favorites f join photos p on p.id = f.photoId
+     where f.galleryId = ${g.id}
+     order by p.position, p.name
+  `).all().map((p) => p.name);
+
+  let commentCount = sql<{ n: number }>(`select count(*)::int as n from comments where galleryId = ${g.id} and author = 'client'`)
+    .firstOrThrow().n;
+
+  let studio = findStudio(g.userId);
+
+  email({
+    to: studio.email,
+    subject: `${g.clientName || "Your client"} sent ${plural(picks.length, "favorite")} from ${g.name}`,
+    body: new SelectionsSubmittedEmail({
+      photographer: studio.name,
+      clientName: g.clientName || "Your client",
+      galleryName: g.name,
+      picks,
+      commentCount,
+      url: `/admin/galleries/${g.id}`,
+    }),
+  });
+
+  galleryEvents.notify({ galleryId: g.id, status: "submitted", at: row.submittedAt });
+
+  return "submitted";
+}
+
+function onUnlock(token: string, access: Access) {
+  access.checking = true;
+  access.error = "";
+
+  try {
+    let grant = unlock(token, access.password);
+    document.cookie = `${grantCookie(token)}=${grant}; path=/g/${token}; max-age=${60 * 60 * 24 * 90}; samesite=lax`;
+    // The page request opens the gallery's live views, so load it again with the grant.
+    location.reload();
+  } catch (err: any) {
+    access.error = err.message;
+    access.checking = false;
+  }
+}
+
+function onGalleryInit(view: ClientView) {
+  view.events.on("notify", (e) => {
+    view.status = e.status;
+    view.submittedAt = e.status === "submitted" ? e.at : view.submittedAt;
+  });
+}
+
+function isFavorite(view: ClientView, photoId: string): boolean {
+  return view.favorites.some((f) => f.photoId === photoId);
+}
+
+function commentsFor(view: ClientView, photoId: string): Comment[] {
+  return view.comments
+    .filter((c) => c.photoId === photoId)
+    .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+}
+
+function visiblePhotos(view: ClientView, ui: Ui): Photo[] {
+  if (ui.filter === "favorites") {
+    return view.photos.filter((p) => isFavorite(view, p.id));
+  }
+
+  return view.photos;
+}
+
+function isLocked(view: ClientView): boolean {
+  return view.status === "final" || view.preview;
+}
+
+function onToggleFavorite(view: ClientView, photoId: string) {
+  if (isLocked(view)) {
+    return;
+  }
+
+  let existing = view.favorites.find((f) => f.photoId === photoId);
+
+  if (existing) {
+    view.favorites.delete(existing);
+  } else {
+    view.favorites.insert({ photoId, createdAt: new Date() });
+  }
+}
+
+function onOpen(ui: Ui, photoId: string) {
+  ui.openId = photoId;
+  ui.draft = "";
+  ui.error = "";
+}
+
+function onStep(view: ClientView, ui: Ui, delta: number) {
+  let list = visiblePhotos(view, ui);
+
+  if (list.length === 0) {
+    return;
+  }
+
+  let at = list.findIndex((p) => p.id === ui.openId);
+  let next = at === -1 ? 0 : (at + delta + list.length) % list.length;
+
+  onOpen(ui, list[next].id);
+}
+
+function onLightboxKey(e: KeyboardEvent, view: ClientView, ui: Ui) {
+  if (e.key === "Escape") {
+    ui.openId = null;
+    return;
+  }
+
+  let target = e.target as HTMLElement;
+
+  if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") {
+    return;
+  }
+
+  switch (e.key) {
+    case "ArrowRight":
+      onStep(view, ui, 1);
+      break;
+
+    case "ArrowLeft":
+      onStep(view, ui, -1);
+      break;
+
+    case "f":
+    case "h":
+      if (ui.openId) {
+        onToggleFavorite(view, ui.openId);
+      }
+      break;
+  }
+}
+
+function onComment(view: ClientView, ui: Ui) {
+  let body = ui.draft.trim();
+
+  if (!body || !ui.openId || isLocked(view)) {
+    return;
+  }
+
+  view.comments.insert(
+    { photoId: ui.openId, body, author: "client", createdAt: new Date() },
+    () => ui.draft = "",
+  );
+}
+
+function onSubmitSelections(token: string, grant: string, view: ClientView, ui: Ui) {
+  ui.sending = true;
+  ui.error = "";
+
+  try {
+    view.status = submitSelections(token, grant);
+    view.submittedAt = new Date();
+    ui.confirming = false;
+  } catch (err: any) {
+    ui.error = err.message;
+  }
+
+  ui.sending = false;
+}
+
+function focusSelf(e: LifecycleEvent) {
+  (e.target as HTMLElement).focus();
+}
+
+function timeAgo(d: Date): string {
+  let s = Math.max(0, (Date.now() - +new Date(d)) / 1000);
+
+  if (s < 60) {
+    return "just now";
+  }
+
+  if (s < 3600) {
+    return `${Math.floor(s / 60)}m ago`;
+  }
+
+  if (s < 86400) {
+    return `${Math.floor(s / 3600)}h ago`;
+  }
+
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+<html lang="en" class="page-gallery" (
+  token: string,
+  locked: LockedGallery,
+  initial: ClientView | null,
+  grant: string = "",
+  private access: Access = { view: initial, password: "", error: "", checking: false },
+)>
+  <head>
+    <title>{locked.name} · {locked.studio}</title>
+    <meta name="description" content={`Proofing gallery from ${locked.studio}`}>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <ClientGallery e:if={access.view} view={access.view} {token} {grant} />
+    <Unlock e:else {token} {locked} {access} />
+  </body>
+</html>
+
+<Unlock (token: string, locked: LockedGallery, access: Access)>
+  <main class="unlock center">
+    <div class="unlock-card card">
+      <div class="card-body stack is-lg">
+        <span class="unlock-lock">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <rect x="4.5" y="10.5" width="15" height="10" rx="2"/>
+            <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>
+          </svg>
+        </span>
+        <div class="stack is-xs">
+          <p class="eyebrow">{locked.studio}</p>
+          <h1>{locked.name}</h1>
+          <p class="hint">{formatDate(locked.eventDate)}</p>
+        </div>
+        <form class="stack is-md" onsubmit={() => onUnlock(token, access)}>
+          <p e:if={access.error} class="error" role="alert">{access.error}</p>
+          <div class="field">
+            <label for="gallery-password">Gallery password</label>
+            <input id="gallery-password" type="password" value={access.password} autocomplete="current-password" required>
+          </div>
+          <button type="submit" class={["is-primary", "is-block", access.checking && "is-loading"]} disabled={access.checking}>
+            View gallery
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+</Unlock>
+
+<ClientGallery (
+  view: ClientView,
+  token: string,
+  grant: string,
+  private ui: Ui = { filter: "all" as Filter, openId: null as string | null, draft: "", error: "", confirming: false, sending: false },
+)>
+  <div class="client-gallery" oninit={() => onGalleryInit(view)}>
+    <header class="gallery-cover-hero">
+      <img e:if={view.photos.length > 0} src={view.photos[0].url} alt="">
+      <div class="gallery-cover-text stack is-sm">
+        <p class="eyebrow">{view.studio}</p>
+        <h1>{view.name}</h1>
+        <p>{formatDate(view.eventDate)} · {plural(view.photos.length, "photo")}</p>
+      </div>
+    </header>
+
+    <div class="gallery-toolbar">
+      <div class="gallery-toolbar-inner row">
+        <span class="gallery-toolbar-title truncate">{view.name}</span>
+        <div class="gallery-filter" role="tablist">
+          <button role="tab" class={[ui.filter === "all" && "is-active"]} onclick={() => ui.filter = "all"}>
+            All {view.photos.length}
+          </button>
+          <button role="tab" class={[ui.filter === "favorites" && "is-active"]} onclick={() => ui.filter = "favorites"}>
+            <span class="heart-count">♥</span> Favorites {view.favorites.length}
+          </button>
+        </div>
+        <button e:if={!isLocked(view)} class="is-primary is-sm" onclick={() => ui.confirming = true}>
+          {view.status === "submitted" ? "Send update" : "Submit selections"}
+        </button>
+        <span e:else class={["pill", view.status === "final" ? "is-success" : "is-warning"]}>
+          {view.status === "final" ? "Final" : "Preview"}
+        </span>
+      </div>
+      <div e:if={view.preview} class="gallery-banner is-preview row">
+        You are previewing this gallery as the photographer. Hearts and comments are read-only here.
+      </div>
+      <div e:elseif={view.status === "final"} class="gallery-banner is-final row">
+        {view.photographer} has finalized your selections. Thank you!
+      </div>
+      <div e:elseif={view.status === "submitted"} class="gallery-banner row">
+        Selections sent to {view.photographer}. You can keep changing them and send an update until they are final.
+      </div>
+    </div>
+
+    <main>
+      <ul e:if={visiblePhotos(view, ui).length > 0} class="photo-grid">
+        <PhotoTile e:for={photo of visiblePhotos(view, ui)} {photo} {view} {ui} />
+      </ul>
+      <div e:else class="gallery-empty stack is-sm">
+        <p><strong>No favorites yet.</strong></p>
+        <p>Tap the heart on any photo to add it to your selections.</p>
+        <div><button onclick={() => ui.filter = "all"}>Show all photos</button></div>
+      </div>
+    </main>
+
+    <footer class="gallery-footer">
+      Photographed by {view.photographer} · {view.studio}
+    </footer>
+
+    <Lightbox e:if={ui.openId} {view} {ui} />
+
+    <div e:if={ui.confirming} class="sheet-backdrop" onclick={() => ui.confirming = false}>
+      <div class="sheet card" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()}>
+        <div class="card-body stack is-md">
+          <h2>{view.status === "submitted" ? "Send an update?" : "Send your selections?"}</h2>
+          <p e:if={view.favorites.length > 0}>
+            {view.photographer} will get your {plural(view.favorites.length, "favorite")} and every comment you left.
+          </p>
+          <p e:else>
+            You haven't hearted any photos yet. You can still send your comments to {view.photographer}.
+          </p>
+          <p e:if={ui.error} class="error" role="alert">{ui.error}</p>
+        </div>
+        <div class="card-foot sheet-actions cluster">
+          <button class="is-ghost" onclick={() => ui.confirming = false}>Keep choosing</button>
+          <button class={["is-primary", ui.sending && "is-loading"]} disabled={ui.sending}
+                  onclick={() => onSubmitSelections(token, grant, view, ui)}>
+            Send to {view.photographer.split(" ")[0]}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</ClientGallery>
+
+<HeartIcon (filled: boolean, size: number = 18)>
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false"
+       fill={filled ? "currentColor" : "none"} stroke="currentColor" stroke-width="1.9" stroke-linejoin="round">
+    <path d="M12 20.5s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7.6a4.2 4.2 0 0 1 7.5 2.6c0 5.7-7.5 10.3-7.5 10.3Z"/>
+  </svg>
+</HeartIcon>
+
+<PhotoTile (photo: Photo, view: ClientView, ui: Ui)>
+  <li class={["photo-tile", isFavorite(view, photo.id) && "is-favorite", commentsFor(view, photo.id).length > 0 && "has-comments"]}
+      style={`--ar: ${(photo.width ?? 3) / (photo.height ?? 2)}`}>
+    <button class="photo-open" onclick={() => onOpen(ui, photo.id)} aria-label={`Open ${photo.name}`}>
+      <img src={photo.url} alt={photo.name} loading="lazy" width={photo.width ?? 1500} height={photo.height ?? 1000}>
+    </button>
+    <div class="photo-tile-bar row">
+      <span class="photo-tile-name">{photo.name}</span>
+      <span class="row is-sm photo-tile-comments cluster">
+        <span e:if={commentsFor(view, photo.id).length > 0} class="row is-xs photo-tile-count" aria-label="Comments"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg> {commentsFor(view, photo.id).length}</span>
+        <button class={["heart-button", isFavorite(view, photo.id) && "is-on"]}
+                aria-pressed={isFavorite(view, photo.id)}
+                aria-label={isFavorite(view, photo.id) ? "Remove from favorites" : "Add to favorites"}
+                disabled={isLocked(view)}
+                onclick={() => onToggleFavorite(view, photo.id)}>
+          <HeartIcon filled={isFavorite(view, photo.id)} />
+        </button>
+      </span>
+    </div>
+  </li>
+</PhotoTile>
+
+<Lightbox (view: ClientView, ui: Ui)>
+  <div class="lightbox" tabindex={-1} role="dialog" aria-modal="true" aria-label="Photo viewer"
+       oninsert={focusSelf} onkeydown={(e) => onLightboxKey(e, view, ui)}>
+    <LightboxBody e:for={photo of view.photos.filter((p) => p.id === ui.openId)} {photo} {view} {ui} />
+  </div>
+</Lightbox>
+
+<LightboxBody (photo: Photo, view: ClientView, ui: Ui)>
+  <div class="lightbox-stage">
+    <button class="lightbox-close is-sm" onclick={() => ui.openId = null}>✕ Close</button>
+    <span class="lightbox-counter">
+      {visiblePhotos(view, ui).findIndex((p) => p.id === photo.id) + 1} / {visiblePhotos(view, ui).length}
+    </span>
+    <img src={photo.url} alt={photo.name} width={photo.width ?? 1500} height={photo.height ?? 1000}>
+    <button class="lightbox-nav is-prev" aria-label="Previous photo" onclick={() => onStep(view, ui, -1)}>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <button class="lightbox-nav is-next" aria-label="Next photo" onclick={() => onStep(view, ui, 1)}>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+
+  <aside class="lightbox-panel">
+    <div class="lightbox-panel-head row">
+      <span class="lightbox-name truncate">{photo.name}</span>
+      <button class={["lightbox-heart", "row", isFavorite(view, photo.id) && "is-on"]}
+              aria-pressed={isFavorite(view, photo.id)}
+              disabled={isLocked(view)}
+              onclick={() => onToggleFavorite(view, photo.id)}>
+        <HeartIcon filled={isFavorite(view, photo.id)} />
+        {isFavorite(view, photo.id) ? "Favorite" : "Add to favorites"}
+      </button>
+    </div>
+
+    <div class="lightbox-comments stack is-lg">
+      <p e:if={commentsFor(view, photo.id).length === 0} class="lightbox-comments-empty">
+        Want a crop, a black and white version, or a retouch? Leave a note for {view.photographer.split(" ")[0]}.
+      </p>
+      <div e:for={c of commentsFor(view, photo.id)} class={["comment", "stack", c.author === "photographer" && "is-photographer"]}>
+        <span class="comment-author row">
+          {c.author === "photographer" ? view.photographer : (view.clientName || "You")}
+          <span class="comment-time">{timeAgo(c.createdAt)}</span>
+        </span>
+        <p class="comment-body">{c.body}</p>
+      </div>
+    </div>
+
+    <form e:if={!isLocked(view)} class="lightbox-compose stack is-sm" onsubmit={() => onComment(view, ui)}>
+      <textarea value={ui.draft} placeholder="Add a comment…" aria-label="Comment on this photo" maxlength={2000}></textarea>
+      <div class="lightbox-compose-actions row">
+        <span class="hint">← → to browse · H to heart</span>
+        <button type="submit" class="is-primary is-sm" disabled={!ui.draft.trim()}>Comment</button>
+      </div>
+    </form>
+  </aside>
+</LightboxBody>

@@ -1,0 +1,98 @@
+import "./style.css";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { AdminLayout } from "#app/shared/templates/admin-layout";
+import { StatusPill } from "#app/shared/templates/status-pill";
+import { sql } from "@elements/app";
+import { GalleryStatus, PhotoRow, formatDate, photoUrl, plural } from "#app/shared/services/galleries";
+
+export interface GallerySummary {
+  id: string;
+  name: string;
+  eventDate: Date;
+  clientName: string;
+  status: GalleryStatus;
+  photoCount: number;
+  favoriteCount: number;
+  commentCount: number;
+  covers: string[];
+}
+
+type SummaryRow = Omit<GallerySummary, "covers">;
+
+/** Every gallery the photographer owns, newest session first, with three cover photos each. */
+export function gallerySummaries(userId: string): GallerySummary[] {
+  let rows = sql<SummaryRow>(`
+    select g.id, g.name, g.eventDate, g.clientName, g.status,
+           (select count(*)::int from photos p where p.galleryId = g.id) as photoCount,
+           (select count(*)::int from favorites f where f.galleryId = g.id) as favoriteCount,
+           (select count(*)::int from comments c where c.galleryId = g.id) as commentCount
+      from galleries g
+     where g.userId = ${userId}
+     order by g.eventDate desc, g.createdAt desc
+  `).all();
+
+  let covers = sql<PhotoRow & { rank: number }>(`
+    select * from (
+      select id, galleryId, name, position, width, height, seedKey, hash,
+             row_number() over (partition by galleryId order by position, createdAt) as rank
+        from photos
+       where galleryId in (select id from galleries where userId = ${userId})
+    ) ranked
+    where rank <= 3
+  `).all();
+
+  return rows.map((g) => ({
+    ...g,
+    covers: covers.filter((p) => p.galleryId === g.id).map(photoUrl),
+  }));
+}
+
+<html lang="en" class="page-admin" (galleries: GallerySummary[])>
+  <head>
+    <title>Galleries · proofloft</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <AdminLayout active="galleries">
+      <div class="stack is-xl">
+        <div class="galleries-head row">
+          <div class="stack is-xs">
+            <p class="eyebrow">Your studio</p>
+            <h1>Galleries</h1>
+          </div>
+          <a class="button is-primary" href="/admin/galleries/new">New gallery</a>
+        </div>
+
+        <ul e:if={galleries.length > 0} class="gallery-grid">
+          <li e:for={g of galleries}>
+            <a class="gallery-card" href={`/admin/galleries/${g.id}`}>
+              <div class="gallery-cover">
+                <img e:for={url of g.covers} src={url} alt="" loading="lazy">
+                <div e:if={g.covers.length === 0} class="gallery-cover-empty center">No photos yet</div>
+              </div>
+              <div class="gallery-info stack is-sm">
+                <div class="row gallery-stats">
+                  <span class="gallery-meta">{formatDate(g.eventDate)}</span>
+                  <StatusPill status={g.status} />
+                </div>
+                <h2>{g.name}</h2>
+                <div class="gallery-meta">{g.clientName || "No client yet"}</div>
+                <div class="gallery-stats cluster is-md">
+                  <span>{plural(g.photoCount, "photo")}</span>
+                  <span class="gallery-stat-heart">♥ {g.favoriteCount}</span>
+                  <span>{plural(g.commentCount, "comment")}</span>
+                </div>
+              </div>
+            </a>
+          </li>
+        </ul>
+
+        <div e:else class="galleries-empty stack is-md">
+          <h2>No galleries yet</h2>
+          <p class="hint">Create one, upload the photos, and send your client the link.</p>
+          <div><a class="button is-primary" href="/admin/galleries/new">New gallery</a></div>
+        </div>
+      </div>
+    </AdminLayout>
+  </body>
+</html>

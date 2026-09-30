@@ -1,0 +1,34 @@
+import "./style.css";
+import { redirect, session } from "@elements/app";
+import { Brand } from "#app/shared/templates/brand";
+import { signout } from "#app/shared/services/auth";
+
+function onSignout() {
+  signout();
+  redirect("/signin");
+}
+
+<AdminLayout (active: string = "galleries")>
+  <div class="app">
+    <header class="admin-header">
+      <div class="page-shell admin-header-inner row">
+        <div class="cluster is-xl">
+          <Brand />
+          <nav class="admin-nav cluster is-lg">
+            <a href="/admin" class={[active === "galleries" && "is-active"]}>Galleries</a>
+            <a href="/admin/galleries/new" class={[active === "new" && "is-active"]}>New gallery</a>
+          </nav>
+        </div>
+        <div class="admin-user cluster is-md">
+          <span class="admin-user-name">{session.get("userName")}</span>
+          <button class="is-ghost is-sm" onclick={() => onSignout()}>Sign out</button>
+        </div>
+      </div>
+    </header>
+    <main class="app-main admin-main">
+      <div class="page-shell">
+        <slot/>
+      </div>
+    </main>
+  </div>
+</AdminLayout>

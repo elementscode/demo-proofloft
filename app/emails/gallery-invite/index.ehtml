@@ -1,0 +1,37 @@
+import "./style.css";
+
+/**
+ * Sent to the client with the private link to their gallery.
+ *
+ * @email
+ */
+<html (
+  clientName: string,
+  photographer: string,
+  studio: string,
+  galleryName: string,
+  photoCount: number,
+  url: string,
+  password: string,
+  message: string,
+)>
+  <body class="email gallery-invite">
+    <div class="email-wrap">
+      <p class="brand">{studio}</p>
+      <h1>Your photos are ready</h1>
+      <p>Hi {clientName.split(" ")[0] || "there"},</p>
+      <p e:if={message} class="message">{message}</p>
+      <p>
+        Your gallery <strong>{galleryName}</strong> is ready with {photoCount} photos.
+        Tap the heart on your favorites, leave a comment on any photo you want changed,
+        and press <strong>Submit selections</strong> when you're done.
+      </p>
+      <p><a class="cta" href={url}>Open your gallery</a></p>
+      <p e:if={password} class="password">Gallery password: <code>{password}</code></p>
+      <p>{photographer}</p>
+      <div class="email-footer">
+        <p>This link is private to you. Please don't share it publicly.</p>
+      </div>
+    </div>
+  </body>
+</html>
