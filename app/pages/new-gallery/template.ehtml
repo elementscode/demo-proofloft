@@ -1,0 +1,157 @@
+import "./style.css";
+import { File, ValidationError, redirect, session, sql } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { AdminLayout } from "#app/shared/templates/admin-layout";
+import { plural } from "#app/shared/services/galleries";
+import { readDimensions, uploadPhotos } from "#app/shared/services/uploads";
+
+export interface NewGallery {
+  name: string;
+  eventDate: string;
+  clientName: string;
+  clientEmail: string;
+  password: string;
+}
+
+interface Form extends NewGallery {
+  files: File[];
+  error: string;
+  saving: boolean;
+  uploaded: number;
+}
+
+/** @rpc */
+export function createGallery(form: NewGallery): string {
+  session.isLoggedInOrThrow();
+
+  let name = form.name.trim();
+
+  if (!name) {
+    throw new ValidationError("Give the gallery a name.");
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(form.eventDate)) {
+    throw new ValidationError("Pick the session date.");
+  }
+
+  let password = form.password.trim();
+
+  return sql<{ id: string }>(`
+    insert into galleries (userId, name, eventDate, clientName, clientEmail, passwordHash)
+         values (${session.getOrThrow("userId")}, ${name}, ${form.eventDate}::date,
+                 ${form.clientName.trim()}, ${form.clientEmail.trim().toLowerCase()},
+                 case when ${password} = '' then null else crypt(${password}, genSalt('bf', 10)) end)
+      returning id
+  `).firstOrThrow().id;
+}
+
+function previewUrl(f: File): string {
+  return URL.createObjectURL(new Blob([f.data as BlobPart], { type: f.contentType }));
+}
+
+async function onSubmit(form: Form) {
+  form.saving = true;
+  form.error = "";
+  form.uploaded = 0;
+
+  try {
+    let id = createGallery({
+      name: form.name,
+      eventDate: form.eventDate,
+      clientName: form.clientName,
+      clientEmail: form.clientEmail,
+      password: form.password,
+    });
+
+    // One photo per request keeps each request small and lets the count move.
+    for (let f of form.files) {
+      let d = await readDimensions(f);
+      uploadPhotos({ galleryId: id, files: [f], dimensions: [d] });
+      form.uploaded++;
+    }
+
+    redirect(`/admin/galleries/${id}`);
+  } catch (err: any) {
+    form.error = err.message;
+    form.saving = false;
+  }
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+<html lang="en" class="page-new-gallery" (
+  private form: Form = {
+    name: "", eventDate: today(), clientName: "", clientEmail: "", password: "",
+    files: [] as File[], error: "", saving: false, uploaded: 0,
+  },
+)>
+  <head>
+    <title>New gallery · proofloft</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <AdminLayout active="new">
+      <div class="new-gallery stack is-xl">
+        <a class="link-muted text-sm" href="/admin">← All galleries</a>
+        <div class="stack is-xs">
+          <p class="eyebrow">New gallery</p>
+          <h1>Create a proofing gallery</h1>
+          <p class="lede">Name it, add the photos, then send the private link from the gallery page.</p>
+        </div>
+
+        <form class="card" onsubmit={() => onSubmit(form)}>
+          <div class="card-body stack is-lg">
+            <div class="field">
+              <label for="name">Gallery name</label>
+              <input id="name" value={form.name} placeholder="Harper & Theo · Engagement" required>
+            </div>
+
+            <div class="field">
+              <label for="date">Session date</label>
+              <input id="date" type="date" value={form.eventDate} required>
+            </div>
+
+            <div class="field">
+              <label for="client-name">Client name <span class="hint">optional</span></label>
+              <input id="client-name" value={form.clientName} placeholder="Harper Lin">
+            </div>
+
+            <div class="field">
+              <label for="client-email">Client email <span class="hint">optional</span></label>
+              <input id="client-email" type="email" value={form.clientEmail} placeholder="harper@example.com" autocapitalize="none" spellcheck={false}>
+            </div>
+
+            <div class="field">
+              <label for="password">Gallery password <span class="hint">optional</span></label>
+              <input id="password" type="text" value={form.password} autocomplete="off" placeholder="Leave blank to share by link only">
+            </div>
+
+            <div class="new-gallery-drop">
+              <label for="photos"><strong>Photos</strong></label>
+              <input id="photos" type="file" multiple accept="image/jpeg,image/png,image/webp" value={form.files} disabled={form.saving}>
+              <p class="hint">Select as many as you like. JPEG, PNG or WebP, up to 25 MB each.</p>
+              <ul e:if={form.files.length > 0} class="new-gallery-previews">
+                <li e:for={f of form.files.slice(0, 48)}><img src={previewUrl(f)} alt={f.name}></li>
+              </ul>
+              <p e:if={form.files.length > 48} class="hint">and {form.files.length - 48} more</p>
+            </div>
+
+            <p e:if={form.error} class="error" role="alert">{form.error}</p>
+            <progress e:if={form.saving && form.files.length > 0} max={form.files.length} value={form.uploaded}></progress>
+          </div>
+
+          <div class="card-foot new-gallery-actions cluster">
+            <a class="button is-ghost" href="/admin">Cancel</a>
+            <button type="submit" class={["is-primary", form.saving && "is-loading"]} disabled={form.saving}>
+              {form.saving
+                ? (form.files.length > 0 ? `Uploading ${form.uploaded} of ${form.files.length}` : "Creating")
+                : (form.files.length > 0 ? `Create with ${plural(form.files.length, "photo")}` : "Create gallery")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </AdminLayout>
+  </body>
+</html>

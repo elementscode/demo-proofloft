@@ -1,0 +1,22 @@
+import { GalleryStatus } from "#app/shared/services/galleries";
+
+const LABELS: Record<GalleryStatus, string> = {
+  draft: "Draft",
+  shared: "Shared",
+  submitted: "Selections in",
+  final: "Final",
+};
+
+const INTENTS: Record<GalleryStatus, string> = {
+  draft: "",
+  shared: "is-info",
+  submitted: "is-warning",
+  final: "is-success",
+};
+
+<StatusPill (status: GalleryStatus)>
+  <span class={["pill", INTENTS[status]]}>
+    <span class="pill-dot"></span>
+    {LABELS[status]}
+  </span>
+</StatusPill>

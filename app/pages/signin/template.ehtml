@@ -1,0 +1,98 @@
+import "./style.css";
+import { redirect } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import hero from "#app/shared/assets/seed/wedding-19.jpg";
+import { Brand } from "#app/shared/templates/brand";
+import { signin } from "#app/shared/services/auth";
+
+export const DEMO_EMAIL = "nora@proofloft.studio";
+export const DEMO_PASSWORD = "proofloft";
+
+interface SigninForm {
+  email: string;
+  password: string;
+  error: string;
+}
+
+function onSubmit(form: SigninForm) {
+  try {
+    signin(form.email, form.password);
+    form.error = "";
+    redirect("/admin");
+  } catch (err: any) {
+    form.error = err.message;
+  }
+}
+
+function onUseDemo(form: SigninForm) {
+  form.email = DEMO_EMAIL;
+  form.password = DEMO_PASSWORD;
+  onSubmit(form);
+}
+
+<html lang="en" class="page-signin" (
+  private form: SigninForm = { email: "", password: "", error: "" },
+)>
+  <head>
+    <title>Sign in · proofloft</title>
+    <meta name="description" content="Client proofing galleries for photographers.">
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <div class="signin">
+      <figure class="signin-photo">
+        <img src={hero} alt="A bride holding her bouquet in a sunlit garden" width="934" height="1400">
+        <figcaption>Share the gallery. Let them pick their favorites.</figcaption>
+      </figure>
+
+      <main class="signin-panel center">
+        <form class="signin-form stack is-lg" onsubmit={() => onSubmit(form)}>
+          <Brand href="/signin" />
+
+          <div class="stack is-xs">
+            <h1>Sign in to your studio</h1>
+            <p class="hint">Proofing galleries for your clients.</p>
+          </div>
+
+          <p e:if={form.error} class="error" role="alert">{form.error}</p>
+
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email"
+                   name="email"
+                   type="email"
+                   value={form.email}
+                   autocomplete="email"
+                   autocapitalize="none"
+                   spellcheck={false}
+                   placeholder="you@studio.com"
+                   required>
+          </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password"
+                   name="password"
+                   type="password"
+                   value={form.password}
+                   autocomplete="current-password"
+                   required>
+          </div>
+
+          <button type="submit" class="is-primary is-block">Sign in</button>
+
+          <div class="callout is-accent signin-demo stack is-sm">
+            <div class="callout-title">Demo photographer</div>
+            <dl>
+              <dt>Email</dt>
+              <dd><code>{DEMO_EMAIL}</code></dd>
+              <dt>Password</dt>
+              <dd><code>{DEMO_PASSWORD}</code></dd>
+            </dl>
+            <button type="button" class="is-sm" onclick={() => onUseDemo(form)}>Sign in as Nora</button>
+          </div>
+        </form>
+      </main>
+    </div>
+  </body>
+</html>

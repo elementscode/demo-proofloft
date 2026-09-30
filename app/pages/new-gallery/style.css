@@ -1,0 +1,51 @@
+@import "#app/shared/styles/page.css";
+
+.new-gallery {
+  max-width: var(--container-2xl);
+}
+
+.new-gallery h1 {
+  margin: 0;
+  font-family: var(--display-font);
+  font-weight: var(--weight-semibold);
+}
+
+.new-gallery-drop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: var(--radius-surface);
+  background: var(--bg-soft);
+}
+
+.new-gallery-drop input[type="file"] {
+  width: 100%;
+  min-width: 0;
+}
+
+.new-gallery-previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: var(--space-1-5);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.new-gallery-previews img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-xs);
+}
+
+.new-gallery-actions {
+  justify-content: flex-end;
+}
+
+.new-gallery progress {
+  width: 100%;
+}

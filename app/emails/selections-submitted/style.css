@@ -1,0 +1,41 @@
+@import "#app/shared/styles/email.css";
+
+.email .brand {
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #8a3f1f;
+}
+
+.email a.cta {
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: 8px;
+  background: #a24a26;
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.email .picks {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 8px;
+  background: #f7f3ef;
+}
+
+.email .label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b625b;
+}
+
+.email .files {
+  margin: 0;
+  font-family: Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+}
