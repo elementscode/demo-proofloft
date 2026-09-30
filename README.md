@@ -1,12 +1,12 @@
-![Proofloft, a client proofing app built with Elements: an engagement gallery in a full-width photo grid, with hearts on the client's favorites and comment counts on the photos they asked about.](POSTER_URL)
+![Proofloft, a client proofing app built with Elements: an engagement gallery in a full-width photo grid, with hearts on the client's favorites and comment counts on the photos they asked about.](https://elements.dev/demos/01a0f424-a33a-7f14-94c0-cfe190131ec9/poster?v=c703bbd63234)
 
 # Proofloft
 
 > A demo app built with [Elements](https://elements.dev).
 
-Bulk-uploaded galleries shared by private link, where clients heart favorites and comment live, and the photographer downloads the chosen file names.
+Private photo galleries where clients heart favorites and comment live, and the photographer downloads the chosen file names.
 
-**Demo:** [Proofloft](TBD)
+**Demo:** [Proofloft](https://elements.dev/demos/01a0f424-a33a-7f14-94c0-cfe190131ec9)
 
 ## Agent specs
 
