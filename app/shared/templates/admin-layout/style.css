@@ -1,0 +1,53 @@
+@import "#app/shared/styles/page.css";
+
+.admin-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  border-bottom: 1px solid var(--rule-soft);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.admin-header-inner {
+  justify-content: space-between;
+  padding-block: var(--space-3);
+}
+
+.admin-nav {
+  font-size: var(--text-sm);
+}
+
+.admin-nav a {
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.admin-nav a.is-active,
+.admin-nav a:hover {
+  color: var(--ink);
+}
+
+.admin-user {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.admin-main {
+  padding-block: var(--space-10) var(--space-16);
+}
+
+.admin-user button {
+  white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+  .admin-user-name,
+  .admin-nav {
+    display: none;
+  }
+
+  .admin-main {
+    padding-block: var(--space-6) var(--space-12);
+  }
+}

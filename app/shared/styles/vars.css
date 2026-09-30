@@ -1,0 +1,43 @@
+@layer tokens {
+  :root {
+    --brand-50: oklch(0.985 0.007 42);
+    --brand-100: oklch(0.96 0.019 42);
+    --brand-200: oklch(0.92 0.039 42);
+    --brand-300: oklch(0.86 0.070 42);
+    --brand-400: oklch(0.74 0.136 42);
+    --brand-500: oklch(0.62 0.147 42);
+    --brand-600: oklch(0.52 0.123 42);
+    --brand-700: oklch(0.42 0.100 42);
+    --brand-800: oklch(0.32 0.076 42);
+    --brand-900: oklch(0.22 0.052 42);
+    --brand-950: oklch(0.14 0.033 42);
+    --accent: var(--brand-600);
+    --accent-deep: var(--brand-700);
+    --accent-soft: var(--brand-50);
+    --accent-ink: #ffffff;
+    --accent-edge: var(--brand-200);
+    --link-c: 0.123;
+    --link-h: 42;
+    --heart: oklch(0.62 0.21 18);
+    --heart-soft: oklch(0.95 0.035 18);
+    --display-font: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --accent: var(--brand-400);
+      --accent-deep: var(--brand-300);
+      --accent-soft: var(--brand-900);
+      --accent-ink: var(--brand-950);
+      --accent-edge: var(--brand-700);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --accent: var(--brand-400);
+    --accent-deep: var(--brand-300);
+    --accent-soft: var(--brand-900);
+    --accent-ink: var(--brand-950);
+    --accent-edge: var(--brand-700);
+  }
+}

@@ -1,0 +1,32 @@
+@import "#app/shared/styles/email.css";
+
+.email .brand {
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #8a3f1f;
+}
+
+.email .message {
+  padding: 14px 16px;
+  border-left: 3px solid #a24a26;
+  background: #f7f3ef;
+  white-space: pre-wrap;
+}
+
+.email a.cta {
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: 8px;
+  background: #a24a26;
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.email .password code {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f1ece6;
+  font-family: Menlo, Consolas, monospace;
+}

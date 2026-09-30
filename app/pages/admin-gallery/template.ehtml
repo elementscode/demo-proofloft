@@ -1,0 +1,529 @@
+import "./style.css";
+import { File, LiveView, ValidationError, email, sql } from "@elements/app";
+import type { Listener } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { AdminLayout } from "#app/shared/templates/admin-layout";
+import { StatusPill } from "#app/shared/templates/status-pill";
+import {
+  Comment,
+  Favorite,
+  Gallery,
+  GalleryEvent,
+  Photo,
+  findGallery,
+  findStudio,
+  formatDate,
+  galleryEvents,
+  listPhotos,
+  ownGalleryOrThrow,
+  plural,
+} from "#app/shared/services/galleries";
+import { readDimensions, uploadPhotos } from "#app/shared/services/uploads";
+import GalleryInviteEmail from "#app/emails/gallery-invite";
+
+type Tab = "favorites" | "comments" | "photos";
+
+interface Invite {
+  clientName: string;
+  clientEmail: string;
+  password: string;
+  message: string;
+}
+
+interface Ui {
+  tab: Tab;
+  copied: string;
+  inviting: boolean;
+  inviteNote: string;
+  inviteError: string;
+  toast: string;
+  files: File[];
+  uploading: boolean;
+  uploaded: number;
+  uploadTotal: number;
+  uploadError: string;
+}
+
+export interface InviteForm extends Invite {
+  galleryId: string;
+}
+
+/** @rpc */
+export function sendInvite(form: InviteForm): Gallery {
+  let gallery = ownGalleryOrThrow(form.galleryId);
+  let clientName = form.clientName.trim();
+  let clientEmail = form.clientEmail.trim().toLowerCase();
+  let password = form.password.trim();
+
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clientEmail)) {
+    throw new ValidationError("Enter the client's email address.");
+  }
+
+  sql(`
+    update galleries
+       set clientName = ${clientName},
+           clientEmail = ${clientEmail},
+           passwordHash = case when ${password} = '' then passwordHash else crypt(${password}, genSalt('bf', 10)) end,
+           status = case when status = 'draft' then 'shared' else status end,
+           sharedAt = now()
+     where id = ${gallery.id}
+  `);
+
+  let studio = findStudio(gallery.userId);
+
+  email({
+    to: clientEmail,
+    replyTo: studio.email,
+    subject: `Your photos from ${studio.studio} are ready`,
+    body: new GalleryInviteEmail({
+      clientName,
+      photographer: studio.name,
+      studio: studio.studio,
+      galleryName: gallery.name,
+      photoCount: listPhotos(gallery.id).length,
+      url: `/g/${gallery.shareToken}`,
+      password: password || (gallery.hasPassword ? "the one I sent you" : ""),
+      message: form.message.trim(),
+    }),
+  });
+
+  return findGallery(gallery.id);
+}
+
+/** @rpc */
+export function removePassword(galleryId: string): Gallery {
+  ownGalleryOrThrow(galleryId);
+  sql(`update galleries set passwordHash = null where id = ${galleryId}`);
+
+  return findGallery(galleryId);
+}
+
+/** @rpc */
+export function setFinal(galleryId: string, final: boolean): Gallery {
+  ownGalleryOrThrow(galleryId);
+
+  let row = sql<Gallery>(`
+    update galleries
+       set status = case when ${final} then 'final'
+                         when submittedAt is not null then 'submitted'
+                         else 'shared' end,
+           finalizedAt = case when ${final} then now() else null end
+     where id = ${galleryId}
+    returning status
+  `).firstOrThrow();
+
+  galleryEvents.notify({ galleryId, status: row.status, at: new Date() });
+
+  return findGallery(galleryId);
+}
+
+/** @rpc */
+export function refreshPhotos(galleryId: string): Photo[] {
+  ownGalleryOrThrow(galleryId);
+
+  return listPhotos(galleryId);
+}
+
+interface Page {
+  gallery: Gallery;
+  photos: Photo[];
+}
+
+function onPageInit(page: Page, events: Listener<GalleryEvent>, ui: Ui) {
+  events.on("notify", (e) => {
+    page.gallery.status = e.status;
+
+    if (e.status === "submitted") {
+      page.gallery.submittedAt = e.at;
+      showToast(ui, `${page.gallery.clientName || "Your client"} just sent their selections.`);
+    }
+  });
+}
+
+function showToast(ui: Ui, text: string) {
+  ui.toast = text;
+  setTimeout(() => {
+    if (ui.toast === text) {
+      ui.toast = "";
+    }
+  }, 6000);
+}
+
+function photoFor(page: Page, id: string): Photo | undefined {
+  return page.photos.find((p) => p.id === id);
+}
+
+function isFavorite(favorites: LiveView<Favorite>, photoId: string): boolean {
+  return favorites.some((f) => f.photoId === photoId);
+}
+
+function favoritePhotos(page: Page, favorites: LiveView<Favorite>): Photo[] {
+  return page.photos.filter((p) => isFavorite(favorites, p.id));
+}
+
+function commentCount(comments: LiveView<Comment>, photoId: string): number {
+  return comments.filter((c) => c.photoId === photoId).length;
+}
+
+interface Thread {
+  id: string;
+  photo: Photo;
+  comments: Comment[];
+  latest: number;
+}
+
+function threads(page: Page, comments: LiveView<Comment>): Thread[] {
+  let byPhoto = new Map<string, Comment[]>();
+
+  for (let c of comments) {
+    let list = byPhoto.get(c.photoId) ?? [];
+    list.push(c);
+    byPhoto.set(c.photoId, list);
+  }
+
+  let out: Thread[] = [];
+
+  for (let [photoId, list] of byPhoto) {
+    let photo = photoFor(page, photoId);
+
+    if (!photo) {
+      continue;
+    }
+
+    list.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+    out.push({ id: photoId, photo, comments: list, latest: +new Date(list[list.length - 1].createdAt) });
+  }
+
+  return out.sort((a, b) => b.latest - a.latest);
+}
+
+function clientCommentCount(comments: LiveView<Comment>): number {
+  return comments.filter((c) => c.author === "client").length;
+}
+
+function shareUrl(gallery: Gallery): string {
+  return `${location.origin}/g/${gallery.shareToken}`;
+}
+
+async function onCopy(ui: Ui, text: string, what: string) {
+  await navigator.clipboard.writeText(text);
+  ui.copied = what;
+  setTimeout(() => ui.copied = "", 1800);
+}
+
+function onInvite(page: Page, invite: Invite, ui: Ui) {
+  ui.inviting = true;
+  ui.inviteError = "";
+  ui.inviteNote = "";
+
+  try {
+    page.gallery = sendInvite({ galleryId: page.gallery.id, ...invite });
+    ui.inviteNote = `Sent to ${invite.clientEmail}.`;
+    invite.password = "";
+    invite.message = "";
+  } catch (err: any) {
+    ui.inviteError = err.message;
+  }
+
+  ui.inviting = false;
+}
+
+function onRemovePassword(page: Page) {
+  page.gallery = removePassword(page.gallery.id);
+}
+
+function onSetFinal(page: Page, final: boolean) {
+  page.gallery = setFinal(page.gallery.id, final);
+}
+
+function onReply(comments: LiveView<Comment>, draft: { value: string }, photoId: string) {
+  let body = draft.value.trim();
+
+  if (!body) {
+    return;
+  }
+
+  comments.insert(
+    { photoId, body, author: "photographer", createdAt: new Date() },
+    () => draft.value = "",
+  );
+}
+
+async function onUpload(page: Page, ui: Ui) {
+  let files = ui.files;
+
+  if (files.length === 0) {
+    return;
+  }
+
+  ui.uploading = true;
+  ui.uploadError = "";
+  ui.uploaded = 0;
+  ui.uploadTotal = files.length;
+
+  try {
+    // One photo per request keeps each request small and lets the count move.
+    for (let f of files) {
+      let d = await readDimensions(f);
+      uploadPhotos({ galleryId: page.gallery.id, files: [f], dimensions: [d] });
+      ui.uploaded++;
+    }
+
+    page.photos = refreshPhotos(page.gallery.id);
+    ui.files = [];
+    ui.tab = "photos";
+  } catch (err: any) {
+    ui.uploadError = err.message;
+  }
+
+  ui.uploading = false;
+}
+
+function timeAgo(d: Date | null): string {
+  if (!d) {
+    return "";
+  }
+
+  let s = Math.max(0, (Date.now() - +new Date(d)) / 1000);
+
+  if (s < 60) {
+    return "just now";
+  }
+
+  if (s < 3600) {
+    return `${Math.floor(s / 60)}m ago`;
+  }
+
+  if (s < 86400) {
+    return `${Math.floor(s / 3600)}h ago`;
+  }
+
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+<html lang="en" class="page-admin-gallery" (
+  initial: Page,
+  favorites: LiveView<Favorite>,
+  comments: LiveView<Comment>,
+  events: Listener<GalleryEvent>,
+  private page: Page = initial,
+  private invite: Invite = { clientName: initial.gallery.clientName, clientEmail: initial.gallery.clientEmail, password: "", message: "" },
+  private ui: Ui = {
+    tab: (favorites.length > 0 ? "favorites" : "photos") as Tab, copied: "", inviting: false, inviteNote: "", inviteError: "", toast: "",
+    files: [] as File[], uploading: false, uploaded: 0, uploadTotal: 0, uploadError: "",
+  },
+) oninit={() => onPageInit(page, events, ui)}>
+  <head>
+    <title>{page.gallery.name} · proofloft</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <AdminLayout active="galleries">
+      <div class="stack is-xl">
+        <a class="back-link link-muted" href="/admin">← All galleries</a>
+
+        <div class="ag-head row">
+          <div class="stack is-sm">
+            <div class="cluster is-sm">
+              <StatusPill status={page.gallery.status} />
+              <span class="ag-meta">{formatDate(page.gallery.eventDate)}</span>
+            </div>
+            <h1>{page.gallery.name}</h1>
+            <span class="ag-meta">
+              {page.gallery.clientName || "No client yet"}
+              <span e:if={page.gallery.clientEmail}> · {page.gallery.clientEmail}</span>
+            </span>
+          </div>
+          <div class="cluster is-sm">
+            <a class="button" href={`/g/${page.gallery.shareToken}`} target="_blank" rel="noopener">Preview as client</a>
+            <a e:if={favorites.length > 0} class="button" href={`/admin/galleries/${page.gallery.id}/selections.txt`} download>
+              Download selections
+            </a>
+            <button e:if={page.gallery.status !== "final"} class="is-primary" onclick={() => onSetFinal(page, true)}>
+              Mark selections final
+            </button>
+            <button e:else onclick={() => onSetFinal(page, false)}>Reopen selections</button>
+          </div>
+        </div>
+
+        <div class="ag-stats">
+          <div class="ag-stat stack is-xs">
+            <span class="ag-stat-value">{page.photos.length}</span>
+            <span class="ag-stat-label">Photos</span>
+          </div>
+          <div class="ag-stat is-heart stack is-xs">
+            <span class="ag-stat-value">{favorites.length}</span>
+            <span class="ag-stat-label row ag-live">Favorites <span class="pill is-success ag-live"><span class="pill-dot"></span>live</span></span>
+          </div>
+          <div class="ag-stat stack is-xs">
+            <span class="ag-stat-value">{clientCommentCount(comments)}</span>
+            <span class="ag-stat-label">Client comments</span>
+          </div>
+          <div class="ag-stat stack is-xs">
+            <span e:if={page.gallery.status === "final"} class="ag-stat-value is-small">Final {timeAgo(page.gallery.finalizedAt)}</span>
+            <span e:elseif={page.gallery.submittedAt} class="ag-stat-value is-small">Sent {timeAgo(page.gallery.submittedAt)}</span>
+            <span e:else class="ag-stat-value is-small">Not yet</span>
+            <span class="ag-stat-label">Selections submitted</span>
+          </div>
+        </div>
+
+        <div class="ag-layout">
+          <div class="tabs">
+            <div class="tab-list" role="tablist">
+              <button role="tab" class={["tab", ui.tab === "favorites" && "is-active"]} onclick={() => ui.tab = "favorites"}>
+                Favorites ({favorites.length})
+              </button>
+              <button role="tab" class={["tab", ui.tab === "comments" && "is-active"]} onclick={() => ui.tab = "comments"}>
+                Comments ({comments.length})
+              </button>
+              <button role="tab" class={["tab", ui.tab === "photos" && "is-active"]} onclick={() => ui.tab = "photos"}>
+                All photos ({page.photos.length})
+              </button>
+            </div>
+
+            <div class="tab-panel stack is-lg" e:switch={ui.tab}>
+              <div e:case="favorites" class="stack is-lg">
+                <div e:if={favorites.length > 0} class="stack is-md">
+                  <ul class="ag-grid is-favorites">
+                    <AdminTile e:for={photo of favoritePhotos(page, favorites)} {photo} favorite={true} comments={commentCount(comments, photo.id)} />
+                  </ul>
+                  <div class="stack is-sm">
+                    <div class="row cluster" style="justify-content: space-between">
+                      <strong class="text-sm">Chosen file names</strong>
+                      <button class="is-sm is-ghost" onclick={() => onCopy(ui, favoritePhotos(page, favorites).map((p) => p.name).join(", "), "names")}>
+                        {ui.copied === "names" ? "Copied" : "Copy for Lightroom"}
+                      </button>
+                    </div>
+                    <div class="ag-files">{favoritePhotos(page, favorites).map((p) => p.name).join(", ")}</div>
+                  </div>
+                </div>
+                <div e:else class="ag-empty">
+                  No favorites yet. They appear here the moment your client hearts a photo.
+                </div>
+              </div>
+
+              <div e:case="comments" class="stack">
+                <div e:if={comments.length > 0}>
+                  <CommentThread e:for={t of threads(page, comments)} thread={t} {comments}
+                                 favorite={isFavorite(favorites, t.photo.id)} clientName={page.gallery.clientName} />
+                </div>
+                <div e:else class="ag-empty">
+                  No comments yet. Your client can leave one on any photo from the lightbox.
+                </div>
+              </div>
+
+              <div e:case="photos" class="stack is-lg">
+                <form class="upload-drop" onsubmit={() => onUpload(page, ui)}>
+                  <strong>Add photos</strong>
+                  <input type="file" multiple accept="image/jpeg,image/png,image/webp" value={ui.files} disabled={ui.uploading}>
+                  <p e:if={ui.uploadError} class="error" role="alert">{ui.uploadError}</p>
+                  <progress e:if={ui.uploading} max={ui.uploadTotal} value={ui.uploaded}></progress>
+                  <button type="submit" class={["is-primary", "is-sm", ui.uploading && "is-loading"]} disabled={ui.uploading || ui.files.length === 0}>
+                    {ui.uploading ? `Uploading ${ui.uploaded} of ${ui.uploadTotal}` : `Upload ${plural(ui.files.length, "photo")}`}
+                  </button>
+                </form>
+                <ul class="ag-grid">
+                  <AdminTile e:for={photo of page.photos} {photo} favorite={isFavorite(favorites, photo.id)} comments={commentCount(comments, photo.id)} />
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <aside class="ag-side stack is-lg">
+            <div class="card">
+              <div class="card-head"><h2 class="text-md">Share with your client</h2></div>
+              <div class="card-body stack is-md">
+                <div class="field">
+                  <label for="share-link">Private link</label>
+                  <div class="share-link row">
+                    <input id="share-link" readonly value={`/g/${page.gallery.shareToken}`} onfocus={(e) => (e.target as HTMLInputElement).select()}>
+                    <button class="is-sm" onclick={() => onCopy(ui, shareUrl(page.gallery), "link")}>{ui.copied === "link" ? "Copied" : "Copy"}</button>
+                  </div>
+                </div>
+
+                <div class="cluster is-sm text-sm">
+                  <span e:if={page.gallery.hasPassword} class="pill is-accent">Password protected</span>
+                  <span e:else class="pill">No password</span>
+                  <button e:if={page.gallery.hasPassword} class="is-ghost is-sm" onclick={() => onRemovePassword(page)}>Remove</button>
+                </div>
+
+                <form class="stack is-sm" onsubmit={() => onInvite(page, invite, ui)}>
+                  <div class="field">
+                    <label for="client-name">Client name</label>
+                    <input id="client-name" value={invite.clientName} placeholder="Harper Lin" required>
+                  </div>
+                  <div class="field">
+                    <label for="client-email">Client email</label>
+                    <input id="client-email" type="email" value={invite.clientEmail} placeholder="harper@example.com" autocapitalize="none" spellcheck={false} required>
+                  </div>
+                  <div class="field">
+                    <label for="gallery-password">{page.gallery.hasPassword ? "New password" : "Password"} <span class="hint">optional</span></label>
+                    <input id="gallery-password" type="text" value={invite.password} autocomplete="off"
+                           placeholder={page.gallery.hasPassword ? "Keep the current password" : "Leave blank for link only"}>
+                  </div>
+                  <div class="field">
+                    <label for="invite-message">Note <span class="hint">optional</span></label>
+                    <textarea id="invite-message" value={invite.message} placeholder="It was such a joy photographing you two…"></textarea>
+                  </div>
+                  <p e:if={ui.inviteError} class="error" role="alert">{ui.inviteError}</p>
+                  <p e:if={ui.inviteNote} class="hint" role="status">✓ {ui.inviteNote}</p>
+                  <button type="submit" class={["is-primary", "is-block", ui.inviting && "is-loading"]} disabled={ui.inviting}>
+                    {page.gallery.sharedAt ? "Email the link again" : "Email link to client"}
+                  </button>
+                  <p e:if={page.gallery.sharedAt} class="hint">Last sent {timeAgo(page.gallery.sharedAt)}.</p>
+                </form>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div e:if={ui.toast} class="ag-toast callout is-accent" role="status">
+        <div class="callout-title">♥ New selections</div>
+        <div class="callout-body">{ui.toast}</div>
+      </div>
+    </AdminLayout>
+  </body>
+</html>
+
+<AdminTile (photo: Photo, favorite: boolean, comments: number)>
+  <li class={["ag-tile", favorite && "is-favorite"]} style={`--ar: ${(photo.width ?? 3) / (photo.height ?? 2)}`}>
+    <img src={photo.url} alt={photo.name} loading="lazy" width={photo.width ?? 1500} height={photo.height ?? 1000}>
+    <div class="ag-tile-bar row">
+      <span class="truncate">{photo.name}</span>
+      <span class="ag-tile-marks row">
+        <span e:if={comments > 0} class="row ag-tile-count" aria-label="Comments"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg> {comments}</span>
+        <span e:if={favorite} class="ag-heart" aria-label="Favorite">♥</span>
+      </span>
+    </div>
+  </li>
+</AdminTile>
+
+<CommentThread (
+  thread: Thread,
+  comments: LiveView<Comment>,
+  favorite: boolean,
+  clientName: string,
+  private draft: { value: string } = { value: "" },
+)>
+  <div class="thread">
+    <img class="thread-photo" src={thread.photo.url} alt={thread.photo.name} loading="lazy" width="112" height="84">
+    <div class="stack is-md">
+      <span class="thread-name row">
+        {thread.photo.name}
+        <span e:if={favorite} class="ag-heart">♥</span>
+      </span>
+      <div e:for={c of thread.comments} class={["thread-comment", "stack", "is-xs", c.author === "photographer" && "is-photographer"]}>
+        <span class="thread-author row">
+          {c.author === "photographer" ? "You" : (clientName || "Client")}
+          <span class="thread-time">{timeAgo(c.createdAt)}</span>
+        </span>
+        <p>{c.body}</p>
+      </div>
+      <form class="thread-reply row" onsubmit={() => onReply(comments, draft, thread.photo.id)}>
+        <input class="is-sm" value={draft.value} placeholder="Reply…" aria-label={`Reply about ${thread.photo.name}`}>
+        <button type="submit" class="is-sm">Reply</button>
+      </form>
+    </div>
+  </div>
+</CommentThread>
