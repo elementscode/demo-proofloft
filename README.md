@@ -36,9 +36,13 @@ Proofloft needed private galleries a client opens from a link, photo uploads, he
 - **Server calls as function calls.** The admin pages call `@rpc` functions such as `createGallery`, `setFinal` and `refreshPhotos` straight from the template, and `/admin/galleries/:id/selections.txt` downloads the chosen file names.
 - **Data from SQL files.** Two migrations define the studio and seed one photographer, three galleries with 82 photos, and one client's hearts and comments.
 
-### What the agent got from the tooling
+### What the project server gave the agent
 
-The agent ran 25 builds in 26 minutes, checking its work after each edit and moving straight on. The build caught a type error in the client gallery's filter, with the file and line. The agent read 44 manual pages as it reached each part, from `recipes/file-upload` and `recipes/likes-toggle` to `livetable/partitions`, then wrote 26 tests and checked its pages at phone width in a real browser.
+The project server runs alongside the agent and answers as soon as a file is saved: it type-checks the templates, TypeScript and SQL, applies migrations and reruns the tests, so every question came back right away and the agent kept building.
+
+### What shipped
+
+The app type-checks with zero errors and all 26 tests pass. Every page was checked on desktop and phone before publishing. The repo was installed fresh from GitHub and run before the demo went live.
 
 Start in `app/pages/gallery/template.ehtml`.
 
