@@ -29,12 +29,12 @@ Proofloft needed private galleries a client opens from a link, photo uploads, he
 
 ### What Elements gave the app
 
-- **Live hearts and comments.** `favorites` and `comments` are LiveTables in `app/shared/services/galleries.ts`. A client hearts a photo and the photographer's open gallery shows it at once, and a reply lands under the client's comment the same way. The tables' own insert and delete handlers close a client's picks once the gallery is final. A `galleryEvents` channel tells the photographer's page the moment a client submits.
-- **Client access from a link.** `/g/:token` opens a gallery straight from the link the client was sent. `unlock` in `app/pages/gallery/template.ehtml` checks the gallery password and returns a grant kept in a cookie for that gallery, and `submitSelections` checks the same grant.
-- **Uploads into the database.** `uploadPhotos` in `app/shared/services/uploads.ts` takes the files straight from the form and stores the bytes in `photos`. `app/routes/photos.ts` serves each one at a url made from its id and a hash of its bytes.
-- **Emails at each handoff.** `sendInvite` sends the client the `gallery-invite` email with the link, and `submitSelections` sends the photographer `selections-submitted` with the picks.
-- **Server calls as function calls.** The admin pages call `@rpc` functions such as `createGallery`, `setFinal` and `refreshPhotos` straight from the template, and `/admin/galleries/:id/selections.txt` downloads the chosen file names.
-- **Data from SQL files.** Two migrations define the studio and seed one photographer, three galleries with 82 photos, and one client's hearts and comments.
+- **Live hearts and comments.** Favorites and comments are LiveTables. A client hearts a photo and the photographer's open gallery shows it at once, and a reply lands under the client's comment the same way. Once a gallery is final, the client's picks are locked in. A channel tells the photographer the moment a client submits.
+- **Client access from a link.** A client opens their gallery from the private link in their email and enters its password once; a cookie for that gallery keeps them in.
+- **Uploads into the database.** The photographer uploads photos straight from a form, the bytes are stored in the database, and each photo is served at a url made from its id and a hash of its bytes.
+- **Emails at each handoff.** Sharing a gallery emails the client the link, and submitting selections emails the photographer the picks.
+- **Server calls as function calls.** Creating a gallery, uploading, inviting the client and marking selections final call server functions straight from the page with `@rpc`, and the photographer downloads the chosen file names as a text file.
+- **Data from SQL files.** Migrations define the studio and seed one photographer, three galleries with 82 photos, and one client's hearts and comments.
 
 ### What the project server gave the agent
 
@@ -43,8 +43,6 @@ The project server runs alongside the agent and answers as soon as a file is sav
 ### What shipped
 
 The app type-checks with zero errors and all 26 tests pass. Every page works on desktop and phone.
-
-Start in `app/pages/gallery/template.ehtml`.
 
 ## Demo account and seed data
 
