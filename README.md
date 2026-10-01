@@ -23,6 +23,25 @@ app.
 elements create proofloft -scaffold=elementscode/demo-proofloft
 ```
 
+## How it's built
+
+Proofloft needed private galleries a client opens from a link, photo uploads, hearts and comments that both sides see as they happen, emails at each handoff and a file of the chosen names for the photographer. Each of those is a part of Elements, so the agent spent its 26 minutes on the galleries themselves.
+
+### What Elements gave the app
+
+- **Live hearts and comments.** `favorites` and `comments` are LiveTables in `app/shared/services/galleries.ts`. A client hearts a photo and the photographer's open gallery shows it at once, and a reply lands under the client's comment the same way. The tables' own insert and delete handlers close a client's picks once the gallery is final. A `galleryEvents` channel tells the photographer's page the moment a client submits.
+- **Client access from a link.** `/g/:token` opens a gallery with no account. `unlock` in `app/pages/gallery/template.ehtml` checks the gallery password and returns a grant kept in a cookie for that gallery, and `submitSelections` checks the same grant.
+- **Uploads into the database.** `uploadPhotos` in `app/shared/services/uploads.ts` takes the files straight from the form and stores the bytes in `photos`. `app/routes/photos.ts` serves each one at a url made from its id and a hash of its bytes.
+- **Emails at each handoff.** `sendInvite` sends the client the `gallery-invite` email with the link, and `submitSelections` sends the photographer `selections-submitted` with the picks.
+- **Server calls as function calls.** The admin pages call `@rpc` functions such as `createGallery`, `setFinal` and `refreshPhotos` straight from the template, and `/admin/galleries/:id/selections.txt` downloads the chosen file names.
+- **Data from SQL files.** Two migrations define the studio and seed one photographer, three galleries with 82 photos, and one client's hearts and comments.
+
+### What the agent got from the tooling
+
+The agent ran 25 builds in 26 minutes. By the build's own timer, the median build finished in 8 milliseconds, so it checked its work after each edit and kept going. The build caught a type error in the client gallery's filter, with the file and line. The agent read 44 manual pages as it reached each part, from `recipes/file-upload` and `recipes/likes-toggle` to `livetable/partitions`, then wrote 26 tests and checked its pages at phone width in a real browser.
+
+Start in `app/pages/gallery/template.ehtml`.
+
 ## Demo account and seed data
 
 Sign in as the photographer with `nora@proofloft.studio` and the password
