@@ -30,10 +30,15 @@ Proofloft needed private galleries a client opens from a link, photo uploads, he
 ### What Elements gave the app
 
 - **Live hearts and comments.** Favorites and comments are LiveTables. A client hearts a photo and the photographer's open gallery shows it at once, and a reply lands under the client's comment the same way. Once a gallery is final, the client's picks are locked in. A channel tells the photographer the moment a client submits.
+
 - **Client access from a link.** A client opens their gallery from the private link in their email and enters its password once; a cookie for that gallery keeps them in.
+
 - **Uploads into the database.** The photographer uploads photos straight from a form, the bytes are stored in the database, and each photo is served at a url made from its id and a hash of its bytes.
+
 - **Emails at each handoff.** Sharing a gallery emails the client the link, and submitting selections emails the photographer the picks.
+
 - **Server calls as function calls.** Creating a gallery, uploading, inviting the client and marking selections final call server functions straight from the page with `@rpc`, and the photographer downloads the chosen file names as a text file.
+
 - **Data from SQL files.** Migrations define the studio and seed one photographer, three galleries with 82 photos, and one client's hearts and comments.
 
 ### What the project server gave the agent
