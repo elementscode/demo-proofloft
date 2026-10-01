@@ -38,7 +38,7 @@ Proofloft needed private galleries a client opens from a link, photo uploads, he
 
 ### What the agent got from the tooling
 
-The agent ran 25 builds in 26 minutes. By the build's own timer, the median build finished in 8 milliseconds, so it checked its work after each edit and kept going. The build caught a type error in the client gallery's filter, with the file and line. The agent read 44 manual pages as it reached each part, from `recipes/file-upload` and `recipes/likes-toggle` to `livetable/partitions`, then wrote 26 tests and checked its pages at phone width in a real browser.
+The agent ran 25 builds in 26 minutes, checking its work after each edit and moving straight on. The build caught a type error in the client gallery's filter, with the file and line. The agent read 44 manual pages as it reached each part, from `recipes/file-upload` and `recipes/likes-toggle` to `livetable/partitions`, then wrote 26 tests and checked its pages at phone width in a real browser.
 
 Start in `app/pages/gallery/template.ehtml`.
 
