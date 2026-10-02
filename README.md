@@ -10,9 +10,6 @@ Private photo galleries where clients heart favorites and comment live, and the 
 
 ## Agent specs
 
-What one run of the prompt below took, from an empty Elements project to this
-app.
-
 - **Agent:** Claude Code, Opus 5.5 Medium
 - **Time:** 26 min
 - **Cost:** $7.73 at API rates, September 2026
@@ -68,29 +65,7 @@ In development the invite and "selections submitted" emails are written to
 
 The seeded photos are CC0 images from Wikimedia Commons, resized for the web.
 
-## The prompt
-
-```text
-Build a client proofing app named proofloft for a wedding and portrait
-photographer.
-
-PHOTOGRAPHER (admin account)
-- Create a gallery for a client: name, date, upload photos in bulk.
-- Share it with a private link and optional password, emailed to the client.
-- See which photos the client favorited, and their comments.
-- Mark a gallery's selections final and download the list of chosen file
-  names.
-
-CLIENT (no account, from the link)
-- A full-screen gallery grid with a lightbox.
-- Heart favorites, leave a comment on a photo, and submit selections when
-  done. The photographer gets an email.
-
-Seed the photographer and three galleries of 20 to 30 photos each, one with
-favorites and comments. Show the admin login on the sign-in page.
-
-Favorites and comments appear to the photographer in real time.
-```
+**Demo:** [Proofloft](https://elements.dev/demos/01a0f424-a33a-7f14-94c0-cfe190131ec9)
 
 ## License
 
