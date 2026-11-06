@@ -10,6 +10,7 @@ import { toast } from "@elements/ui/toast";
 import { Button } from "@elements/ui/button";
 import { Progress } from "@elements/ui/progress";
 import { Badge } from "@elements/ui/badge";
+import { Empty } from "@elements/ui/empty";
 import { ButtonGroup } from "@elements/ui/button-group";
 import { Card, CardContent } from "@elements/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@elements/ui/field";
@@ -396,9 +397,8 @@ function timeAgo(d: Date | null): string {
                   <div class="ag-files">{favoritePhotos(page, favorites).map((p) => p.name).join(", ")}</div>
                 </div>
               </div>
-              <div e:else class="ag-empty">
-                No favorites yet. They appear here the moment your client hearts a photo.
-              </div>
+              <Empty e:else variant="outline" title="No favorites yet"
+                     description="They appear here the moment your client hearts a photo." />
             </TabsContent>
 
             <TabsContent value="comments" class="stack">
@@ -406,9 +406,8 @@ function timeAgo(d: Date | null): string {
                 <CommentThread e:for={t of threads(page, comments)} thread={t} {comments}
                                favorite={isFavorite(favorites, t.photo.id)} clientName={page.gallery.clientName} />
               </div>
-              <div e:else class="ag-empty">
-                No comments yet. Your client can leave one on any photo from the lightbox.
-              </div>
+              <Empty e:else variant="outline" title="No comments yet"
+                     description="Your client can leave one on any photo from the lightbox." />
             </TabsContent>
 
             <TabsContent value="photos" class="stack is-lg">

@@ -4,6 +4,7 @@ import { AdminLayout } from "#app/shared/templates/admin-layout";
 import { StatusPill } from "#app/shared/templates/status-pill";
 import { sql } from "@elements/app";
 import { Button } from "@elements/ui/button";
+import { Empty, EmptyContent } from "@elements/ui/empty";
 import { GalleryStatus, PhotoRow, formatDate, photoUrl, plural } from "#app/shared/services/galleries";
 
 export interface GallerySummary {
@@ -69,7 +70,7 @@ export function gallerySummaries(userId: string): GallerySummary[] {
             <a class="gallery-card" href={`/admin/galleries/${g.id}`}>
               <div class="gallery-cover">
                 <img e:for={url of g.covers} src={url} alt="" loading="lazy">
-                <div e:if={g.covers.length === 0} class="gallery-cover-empty center">No photos yet</div>
+                <Empty e:if={g.covers.length === 0} variant="muted" class="gallery-cover-empty" description="No photos yet" />
               </div>
               <div class="gallery-info stack is-sm">
                 <div class="row gallery-stats">
@@ -88,11 +89,12 @@ export function gallerySummaries(userId: string): GallerySummary[] {
           </li>
         </ul>
 
-        <div e:else class="galleries-empty stack is-md">
-          <h2>No galleries yet</h2>
-          <p class="hint">Create one, upload the photos, and send your client the link.</p>
-          <div><Button href="/admin/galleries/new" variant="primary">New gallery</Button></div>
-        </div>
+        <Empty e:else variant="outline" title="No galleries yet"
+               description="Create one, upload the photos, and send your client the link.">
+          <EmptyContent>
+            <Button href="/admin/galleries/new" variant="primary">New gallery</Button>
+          </EmptyContent>
+        </Empty>
       </div>
     </AdminLayout>
   </body>
