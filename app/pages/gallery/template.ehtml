@@ -32,6 +32,7 @@ import { Tabs, TabsList, TabsTrigger } from "@elements/ui/tabs";
 import { AlertDialog, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@elements/ui/alert-dialog";
 import { Alert } from "@elements/ui/alert";
 import { Button } from "@elements/ui/button";
+import { Badge } from "@elements/ui/badge";
 import { focusScope, lockScroll, pushLayer } from "@elements/ui/behaviors";
 import type { FocusScope, Layer } from "@elements/ui/behaviors";
 
@@ -459,9 +460,9 @@ function timeAgo(d: Date): string {
         <Button e:if={!isLocked(view)} variant="primary" size="sm" onclick={() => onConfirm(ui)}>
           {view.status === "submitted" ? "Send update" : "Submit selections"}
         </Button>
-        <span e:else class={["pill", view.status === "final" ? "is-success" : "is-warning"]}>
+        <Badge e:else variant={view.status === "final" ? "success" : "warning"}>
           {view.status === "final" ? "Final" : "Preview"}
-        </span>
+        </Badge>
       </div>
     </div>
 

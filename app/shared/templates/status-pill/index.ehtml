@@ -1,4 +1,7 @@
+import { Badge } from "@elements/ui/badge";
 import { GalleryStatus } from "#app/shared/services/galleries";
+
+type Variant = "secondary" | "info" | "warning" | "success";
 
 const LABELS: Record<GalleryStatus, string> = {
   draft: "Draft",
@@ -7,16 +10,13 @@ const LABELS: Record<GalleryStatus, string> = {
   final: "Final",
 };
 
-const INTENTS: Record<GalleryStatus, string> = {
-  draft: "",
-  shared: "is-info",
-  submitted: "is-warning",
-  final: "is-success",
+const VARIANTS: Record<GalleryStatus, Variant> = {
+  draft: "secondary",
+  shared: "info",
+  submitted: "warning",
+  final: "success",
 };
 
 <StatusPill (status: GalleryStatus)>
-  <span class={["pill", INTENTS[status]]}>
-    <span class="pill-dot"></span>
-    {LABELS[status]}
-  </span>
+  <Badge variant={VARIANTS[status]} dot>{LABELS[status]}</Badge>
 </StatusPill>

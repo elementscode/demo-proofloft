@@ -9,6 +9,13 @@ import { Alert } from "@elements/ui/alert";
 import { toast } from "@elements/ui/toast";
 import { Button } from "@elements/ui/button";
 import { Progress } from "@elements/ui/progress";
+import { Badge } from "@elements/ui/badge";
+import { ButtonGroup } from "@elements/ui/button-group";
+import { Card, CardContent } from "@elements/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@elements/ui/field";
+import { FileUpload } from "@elements/ui/file-upload";
+import { Input } from "@elements/ui/input";
+import { Textarea } from "@elements/ui/textarea";
 import {
   Comment,
   Favorite,
@@ -352,7 +359,7 @@ function timeAgo(d: Date | null): string {
           </div>
           <div class="ag-stat is-heart stack is-xs">
             <span class="ag-stat-value">{favorites.length}</span>
-            <span class="ag-stat-label row ag-live">Favorites <span class="pill is-success ag-live"><span class="pill-dot"></span>live</span></span>
+            <span class="ag-stat-label row ag-live">Favorites <Badge variant="success" dot class="ag-live">live</Badge></span>
           </div>
           <div class="ag-stat stack is-xs">
             <span class="ag-stat-value">{clientCommentCount(comments)}</span>
@@ -405,15 +412,18 @@ function timeAgo(d: Date | null): string {
             </TabsContent>
 
             <TabsContent value="photos" class="stack is-lg">
-              <form class="upload-drop" onsubmit={() => onUpload(page, ui)}>
-                <strong>Add photos</strong>
-                <input type="file" multiple accept="image/jpeg,image/png,image/webp" value={ui.files} disabled={ui.uploading}>
+              <form class="stack is-md" onsubmit={() => onUpload(page, ui)}>
+                <Field label="Add photos">
+                  <FileUpload files={ui.files} accept={["image/jpeg", "image/png", "image/webp"]} maxFiles={Infinity} disabled={ui.uploading} />
+                </Field>
                 <Alert e:if={ui.uploadError} variant="danger" description={ui.uploadError} />
-                <Progress e:if={ui.uploading} class="upload-progress" value={ui.uploaded} max={ui.uploadTotal} label="Uploading" showValue
+                <Progress e:if={ui.uploading} value={ui.uploaded} max={ui.uploadTotal} label="Uploading" showValue
                           getValueLabel={(v, max) => `${v} of ${max}`} />
-                <Button type="submit" variant="primary" size="sm" loading={ui.uploading} disabled={ui.files.length === 0}>
-                  Upload {plural(ui.files.length, "photo")}
-                </Button>
+                <div>
+                  <Button type="submit" variant="primary" size="sm" loading={ui.uploading} disabled={ui.files.length === 0}>
+                    Upload {plural(ui.files.length, "photo")}
+                  </Button>
+                </div>
               </form>
               <ul class="ag-grid">
                 <AdminTile e:for={photo of page.photos} {photo} favorite={isFavorite(favorites, photo.id)} comments={commentCount(comments, photo.id)} />
@@ -422,50 +432,49 @@ function timeAgo(d: Date | null): string {
           </Tabs>
 
           <aside class="ag-side stack is-lg">
-            <div class="card">
-              <div class="card-head"><h2 class="text-md">Share with your client</h2></div>
-              <div class="card-body stack is-md">
-                <div class="field">
-                  <label for="share-link">Private link</label>
-                  <div class="share-link row">
-                    <input id="share-link" readonly value={`/g/${page.gallery.shareToken}`} onfocus={(e) => (e.target as HTMLInputElement).select()}>
-                    <Button size="sm" onclick={() => onCopy(ui, shareUrl(page.gallery), "link")}>{ui.copied === "link" ? "Copied" : "Copy"}</Button>
-                  </div>
-                </div>
+            <Card title="Share with your client" level={2} size="sm">
+              <CardContent class="stack is-md">
+                <Field label="Private link">
+                  <ButtonGroup class="share-link">
+                    <Input readonly value={`/g/${page.gallery.shareToken}`} onfocus={(e) => (e.target as HTMLInputElement).select()} />
+                    <Button onclick={() => onCopy(ui, shareUrl(page.gallery), "link")}>{ui.copied === "link" ? "Copied" : "Copy"}</Button>
+                  </ButtonGroup>
+                </Field>
 
                 <div class="cluster is-sm text-sm">
-                  <span e:if={page.gallery.hasPassword} class="pill is-accent">Password protected</span>
-                  <span e:else class="pill">No password</span>
+                  <Badge e:if={page.gallery.hasPassword} variant="accent">Password protected</Badge>
+                  <Badge e:else variant="secondary">No password</Badge>
                   <Button e:if={page.gallery.hasPassword} variant="link" size="sm" onclick={() => onRemovePassword(page)}>Remove</Button>
                 </div>
 
-                <form class="stack is-sm" onsubmit={() => onInvite(page, invite, ui)}>
-                  <div class="field">
-                    <label for="client-name">Client name</label>
-                    <input id="client-name" value={invite.clientName} placeholder="Harper Lin" required>
-                  </div>
-                  <div class="field">
-                    <label for="client-email">Client email</label>
-                    <input id="client-email" type="email" value={invite.clientEmail} placeholder="harper@example.com" autocapitalize="none" spellcheck={false} required>
-                  </div>
-                  <div class="field">
-                    <label for="gallery-password">{page.gallery.hasPassword ? "New password" : "Password"} <span class="hint">optional</span></label>
-                    <input id="gallery-password" type="text" value={invite.password} autocomplete="off"
-                           placeholder={page.gallery.hasPassword ? "Keep the current password" : "Leave blank for link only"}>
-                  </div>
-                  <div class="field">
-                    <label for="invite-message">Note <span class="hint">optional</span></label>
-                    <textarea id="invite-message" value={invite.message} placeholder="It was such a joy photographing you two…"></textarea>
-                  </div>
-                  <Alert e:if={ui.inviteError} variant="danger" description={ui.inviteError} />
-                  <Alert e:if={ui.inviteNote} variant="success" role="status" description={ui.inviteNote} />
-                  <Button type="submit" variant="primary" block loading={ui.inviting}>
-                    {page.gallery.sharedAt ? "Email the link again" : "Email link to client"}
-                  </Button>
-                  <p e:if={page.gallery.sharedAt} class="hint">Last sent {timeAgo(page.gallery.sharedAt)}.</p>
+                <form onsubmit={() => onInvite(page, invite, ui)}>
+                  <FieldGroup>
+                    <Field label="Client name">
+                      <Input value={invite.clientName} placeholder="Harper Lin" required />
+                    </Field>
+                    <Field label="Client email">
+                      <Input type="email" value={invite.clientEmail} placeholder="harper@example.com" required
+                             attrs={{ autocapitalize: "none", spellcheck: "false" }} />
+                    </Field>
+                    <Field>
+                      <FieldLabel>{page.gallery.hasPassword ? "New password" : "Password"} <span class="hint">optional</span></FieldLabel>
+                      <Input value={invite.password} attrs={{ autocomplete: "off" }}
+                             placeholder={page.gallery.hasPassword ? "Keep the current password" : "Leave blank for link only"} />
+                    </Field>
+                    <Field>
+                      <FieldLabel>Note <span class="hint">optional</span></FieldLabel>
+                      <Textarea value={invite.message} placeholder="It was such a joy photographing you two…" />
+                    </Field>
+                    <Alert e:if={ui.inviteError} variant="danger" description={ui.inviteError} />
+                    <Alert e:if={ui.inviteNote} variant="success" role="status" description={ui.inviteNote} />
+                    <Button type="submit" variant="primary" block loading={ui.inviting}>
+                      {page.gallery.sharedAt ? "Email the link again" : "Email link to client"}
+                    </Button>
+                    <p e:if={page.gallery.sharedAt} class="hint">Last sent {timeAgo(page.gallery.sharedAt)}.</p>
+                  </FieldGroup>
                 </form>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </aside>
         </div>
       </div>
@@ -508,7 +517,7 @@ function timeAgo(d: Date | null): string {
         <p>{c.body}</p>
       </div>
       <form class="thread-reply row" onsubmit={() => onReply(comments, draft, thread.photo.id)}>
-        <input class="is-sm" value={draft.value} placeholder="Reply…" aria-label={`Reply about ${thread.photo.name}`}>
+        <Input size="sm" value={draft.value} placeholder="Reply…" attrs={{ "aria-label": `Reply about ${thread.photo.name}` }} />
         <Button type="submit" size="sm">Reply</Button>
       </form>
     </div>
