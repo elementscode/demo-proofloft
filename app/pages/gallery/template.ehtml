@@ -29,6 +29,9 @@ import {
 } from "#app/shared/services/galleries";
 import SelectionsSubmittedEmail from "#app/emails/selections-submitted";
 import { Tabs, TabsList, TabsTrigger } from "@elements/ui/tabs";
+import { AlertDialog, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@elements/ui/alert-dialog";
+import { Alert } from "@elements/ui/alert";
+import { Button } from "@elements/ui/button";
 
 export interface LockedGallery {
   name: string;
@@ -315,19 +318,33 @@ function onComment(view: ClientView, ui: Ui) {
   );
 }
 
-function onSubmitSelections(token: string, grant: string, view: ClientView, ui: Ui) {
+function onConfirm(ui: Ui) {
+  ui.error = "";
+  ui.confirming = true;
+}
+
+function onSubmitSelections(e: MouseEvent, token: string, grant: string, view: ClientView, ui: Ui) {
   ui.sending = true;
   ui.error = "";
 
   try {
     view.status = submitSelections(token, grant);
     view.submittedAt = new Date();
-    ui.confirming = false;
   } catch (err: any) {
+    // Keep the dialog open so the client sees why.
+    e.preventDefault();
     ui.error = err.message;
   }
 
   ui.sending = false;
+}
+
+function confirmText(view: ClientView): string {
+  if (view.favorites.length > 0) {
+    return `${view.photographer} will get your ${plural(view.favorites.length, "favorite")} and every comment you left.`;
+  }
+
+  return `You haven't hearted any photos yet. You can still send your comments to ${view.photographer}.`;
 }
 
 function focusSelf(e: LifecycleEvent) {
@@ -426,9 +443,9 @@ function timeAgo(d: Date): string {
             <TabsTrigger value="favorites"><span class="heart-count">♥</span> Favorites {view.favorites.length}</TabsTrigger>
           </TabsList>
         </Tabs>
-        <button e:if={!isLocked(view)} class="is-primary is-sm" onclick={() => ui.confirming = true}>
+        <Button e:if={!isLocked(view)} variant="primary" size="sm" onclick={() => onConfirm(ui)}>
           {view.status === "submitted" ? "Send update" : "Submit selections"}
-        </button>
+        </Button>
         <span e:else class={["pill", view.status === "final" ? "is-success" : "is-warning"]}>
           {view.status === "final" ? "Final" : "Preview"}
         </span>
@@ -461,27 +478,17 @@ function timeAgo(d: Date): string {
 
     <Lightbox e:if={ui.openId} {view} {ui} />
 
-    <div e:if={ui.confirming} class="sheet-backdrop" onclick={() => ui.confirming = false}>
-      <div class="sheet card" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()}>
-        <div class="card-body stack is-md">
-          <h2>{view.status === "submitted" ? "Send an update?" : "Send your selections?"}</h2>
-          <p e:if={view.favorites.length > 0}>
-            {view.photographer} will get your {plural(view.favorites.length, "favorite")} and every comment you left.
-          </p>
-          <p e:else>
-            You haven't hearted any photos yet. You can still send your comments to {view.photographer}.
-          </p>
-          <p e:if={ui.error} class="error" role="alert">{ui.error}</p>
-        </div>
-        <div class="card-foot sheet-actions cluster">
-          <button class="is-ghost" onclick={() => ui.confirming = false}>Keep choosing</button>
-          <button class={["is-primary", ui.sending && "is-loading"]} disabled={ui.sending}
-                  onclick={() => onSubmitSelections(token, grant, view, ui)}>
-            Send to {view.photographer.split(" ")[0]}
-          </button>
-        </div>
-      </div>
-    </div>
+    <AlertDialog open={ui.confirming}
+                 title={view.status === "submitted" ? "Send an update?" : "Send your selections?"}
+                 description={confirmText(view)}>
+      <Alert e:if={ui.error} variant="danger" description={ui.error} />
+      <AlertDialogFooter>
+        <AlertDialogCancel>Keep choosing</AlertDialogCancel>
+        <AlertDialogAction loading={ui.sending} onclick={(e) => onSubmitSelections(e, token, grant, view, ui)}>
+          Send to {view.photographer.split(" ")[0]}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialog>
   </div>
 </ClientGallery>
 
