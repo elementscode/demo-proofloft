@@ -7,6 +7,11 @@ import { readDimensions, uploadPhotos } from "#app/shared/services/uploads";
 import { Alert } from "@elements/ui/alert";
 import { Button } from "@elements/ui/button";
 import { Progress } from "@elements/ui/progress";
+import { Card, CardContent, CardFooter } from "@elements/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@elements/ui/field";
+import { Input } from "@elements/ui/input";
+import { DatePicker } from "@elements/ui/date-picker";
+import { FileUpload } from "@elements/ui/file-upload";
 
 export interface NewGallery {
   name: string;
@@ -48,9 +53,6 @@ export function createGallery(form: NewGallery): string {
   `).firstOrThrow().id;
 }
 
-function previewUrl(f: File): string {
-  return URL.createObjectURL(new Blob([f.data as BlobPart], { type: f.contentType }));
-}
 
 async function onSubmit(form: Form) {
   form.saving = true;
@@ -104,54 +106,53 @@ function today(): string {
           <p class="lede">Name it, add the photos, then send the private link from the gallery page.</p>
         </div>
 
-        <form class="card" onsubmit={() => onSubmit(form)}>
-          <div class="card-body stack is-lg">
-            <div class="field">
-              <label for="name">Gallery name</label>
-              <input id="name" value={form.name} placeholder="Harper & Theo · Engagement" required>
-            </div>
+        <form onsubmit={() => onSubmit(form)}>
+          <Card>
+            <CardContent>
+              <FieldGroup>
+                <Field label="Gallery name">
+                  <Input value={form.name} placeholder="Harper & Theo · Engagement" required />
+                </Field>
+  
+                <Field label="Session date">
+                  <DatePicker value={form.eventDate} required block />
+                </Field>
+  
+                <Field>
+                  <FieldLabel>Client name <span class="hint">optional</span></FieldLabel>
+                  <Input value={form.clientName} placeholder="Harper Lin" />
+                </Field>
+  
+                <Field>
+                  <FieldLabel>Client email <span class="hint">optional</span></FieldLabel>
+                  <Input type="email" value={form.clientEmail} placeholder="harper@example.com"
+                         attrs={{ autocapitalize: "none", spellcheck: "false" }} />
+                </Field>
+  
+                <Field>
+                  <FieldLabel>Gallery password <span class="hint">optional</span></FieldLabel>
+                  <Input value={form.password} placeholder="Leave blank to share by link only" attrs={{ autocomplete: "off" }} />
+                </Field>
+  
+                <Field label="Photos">
+                  <FileUpload files={form.files} accept={["image/jpeg", "image/png", "image/webp"]} maxFiles={Infinity}
+                              maxFileSize={25_000_000} disabled={form.saving}
+                              hint="Select as many as you like. JPEG, PNG or WebP, up to 25 MB each." />
+                </Field>
+  
+                <Alert e:if={form.error} variant="danger" description={form.error} />
+                <Progress e:if={form.saving && form.files.length > 0} value={form.uploaded} max={form.files.length} label="Uploading" showValue
+                          getValueLabel={(v, max) => `${v} of ${max}`} />
+              </FieldGroup>
+            </CardContent>
 
-            <div class="field">
-              <label for="date">Session date</label>
-              <input id="date" type="date" value={form.eventDate} required>
-            </div>
-
-            <div class="field">
-              <label for="client-name">Client name <span class="hint">optional</span></label>
-              <input id="client-name" value={form.clientName} placeholder="Harper Lin">
-            </div>
-
-            <div class="field">
-              <label for="client-email">Client email <span class="hint">optional</span></label>
-              <input id="client-email" type="email" value={form.clientEmail} placeholder="harper@example.com" autocapitalize="none" spellcheck={false}>
-            </div>
-
-            <div class="field">
-              <label for="password">Gallery password <span class="hint">optional</span></label>
-              <input id="password" type="text" value={form.password} autocomplete="off" placeholder="Leave blank to share by link only">
-            </div>
-
-            <div class="new-gallery-drop">
-              <label for="photos"><strong>Photos</strong></label>
-              <input id="photos" type="file" multiple accept="image/jpeg,image/png,image/webp" value={form.files} disabled={form.saving}>
-              <p class="hint">Select as many as you like. JPEG, PNG or WebP, up to 25 MB each.</p>
-              <ul e:if={form.files.length > 0} class="new-gallery-previews">
-                <li e:for={f of form.files.slice(0, 48)}><img src={previewUrl(f)} alt={f.name}></li>
-              </ul>
-              <p e:if={form.files.length > 48} class="hint">and {form.files.length - 48} more</p>
-            </div>
-
-            <Alert e:if={form.error} variant="danger" description={form.error} />
-            <Progress e:if={form.saving && form.files.length > 0} value={form.uploaded} max={form.files.length} label="Uploading" showValue
-                      getValueLabel={(v, max) => `${v} of ${max}`} />
-          </div>
-
-          <div class="card-foot new-gallery-actions cluster">
-            <Button href="/admin" variant="ghost">Cancel</Button>
-            <Button type="submit" variant="primary" loading={form.saving}>
-              {form.files.length > 0 ? `Create with ${plural(form.files.length, "photo")}` : "Create gallery"}
-            </Button>
-          </div>
+            <CardFooter>
+              <Button href="/admin" variant="ghost">Cancel</Button>
+              <Button type="submit" variant="primary" loading={form.saving}>
+                {form.files.length > 0 ? `Create with ${plural(form.files.length, "photo")}` : "Create gallery"}
+              </Button>
+            </CardFooter>
+          </Card>
         </form>
       </div>
     </AdminLayout>
