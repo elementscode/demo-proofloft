@@ -4,6 +4,8 @@ import favicon from "#app/shared/assets/favicons/favicon.svg";
 import hero from "#app/shared/assets/seed/wedding-19.jpg";
 import { Brand } from "#app/shared/templates/brand";
 import { signin } from "#app/shared/services/auth";
+import { Alert, AlertTitle, AlertDescription } from "@elements/ui/alert";
+import { Button } from "@elements/ui/button";
 
 export const DEMO_EMAIL = "nora@proofloft.studio";
 export const DEMO_PASSWORD = "proofloft";
@@ -54,7 +56,7 @@ function onUseDemo(form: SigninForm) {
             <p class="hint">Proofing galleries for your clients.</p>
           </div>
 
-          <p e:if={form.error} class="error" role="alert">{form.error}</p>
+          <Alert e:if={form.error} variant="danger" description={form.error} />
 
           <div class="field">
             <label for="email">Email</label>
@@ -81,16 +83,18 @@ function onUseDemo(form: SigninForm) {
 
           <button type="submit" class="is-primary is-block">Sign in</button>
 
-          <div class="callout is-accent signin-demo stack is-sm">
-            <div class="callout-title">Demo photographer</div>
-            <dl>
-              <dt>Email</dt>
-              <dd><code>{DEMO_EMAIL}</code></dd>
-              <dt>Password</dt>
-              <dd><code>{DEMO_PASSWORD}</code></dd>
-            </dl>
-            <button type="button" class="is-sm" onclick={() => onUseDemo(form)}>Sign in as Nora</button>
-          </div>
+          <Alert variant="accent" role="none" class="signin-demo">
+            <AlertTitle>Demo photographer</AlertTitle>
+            <AlertDescription class="stack is-sm">
+              <dl>
+                <dt>Email</dt>
+                <dd><code>{DEMO_EMAIL}</code></dd>
+                <dt>Password</dt>
+                <dd><code>{DEMO_PASSWORD}</code></dd>
+              </dl>
+              <Button size="sm" onclick={() => onUseDemo(form)}>Sign in as Nora</Button>
+            </AlertDescription>
+          </Alert>
         </form>
       </main>
     </div>

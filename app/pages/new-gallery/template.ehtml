@@ -4,6 +4,7 @@ import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { AdminLayout } from "#app/shared/templates/admin-layout";
 import { plural } from "#app/shared/services/galleries";
 import { readDimensions, uploadPhotos } from "#app/shared/services/uploads";
+import { Alert } from "@elements/ui/alert";
 
 export interface NewGallery {
   name: string;
@@ -138,7 +139,7 @@ function today(): string {
               <p e:if={form.files.length > 48} class="hint">and {form.files.length - 48} more</p>
             </div>
 
-            <p e:if={form.error} class="error" role="alert">{form.error}</p>
+            <Alert e:if={form.error} variant="danger" description={form.error} />
             <progress e:if={form.saving && form.files.length > 0} max={form.files.length} value={form.uploaded}></progress>
           </div>
 

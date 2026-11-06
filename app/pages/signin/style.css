@@ -72,10 +72,6 @@
   margin: 0;
 }
 
-.signin-demo button {
-  justify-self: start;
-  align-self: flex-start;
-}
 
 @media (max-width: 48rem) {
   .page-signin .signin {

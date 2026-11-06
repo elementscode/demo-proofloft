@@ -2,6 +2,7 @@ import "./style.css";
 import { redirect, session } from "@elements/app";
 import { Brand } from "#app/shared/templates/brand";
 import { signout } from "#app/shared/services/auth";
+import { Toaster } from "@elements/ui/toast";
 
 function onSignout() {
   signout();
@@ -30,5 +31,6 @@ function onSignout() {
         <slot/>
       </div>
     </main>
+    <Toaster />
   </div>
 </AdminLayout>

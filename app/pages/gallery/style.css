@@ -82,22 +82,7 @@
 }
 
 .gallery-banner {
-  justify-content: center;
-  padding: var(--space-3) var(--space-6);
-  font-size: var(--text-sm);
-  text-align: center;
-  background: var(--accent-soft);
-  color: var(--accent-deep);
-}
-
-.gallery-banner.is-final {
-  background: var(--success-soft);
-  color: var(--success-ink);
-}
-
-.gallery-banner.is-preview {
-  background: var(--warning-soft);
-  color: var(--warning-ink);
+  margin: var(--space-4) var(--space-6) var(--space-2);
 }
 
 /* Justified rows: each tile grows in proportion to its aspect ratio, so a row

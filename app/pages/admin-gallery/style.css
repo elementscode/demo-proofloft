@@ -96,19 +96,6 @@
   font-size: var(--text-xs);
 }
 
-.ag-toast {
-  position: fixed;
-  right: var(--space-6);
-  bottom: var(--space-6);
-  z-index: var(--z-toast);
-  max-width: 22rem;
-  box-shadow: var(--shadow-xl);
-  animation: ag-toast-in var(--duration-slow) var(--ease-spring);
-}
-
-@keyframes ag-toast-in {
-  from { opacity: 0; transform: translateY(12px); }
-}
 
 .ag-grid {
   display: flex;
@@ -314,12 +301,6 @@
 
   .ag-tile {
     flex-basis: calc(var(--ar) * 6rem);
-  }
-
-  .ag-toast {
-    left: var(--space-4);
-    right: var(--space-4);
-    bottom: var(--space-4);
   }
 }
 

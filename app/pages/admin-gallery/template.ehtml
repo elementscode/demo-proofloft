@@ -5,6 +5,8 @@ import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { AdminLayout } from "#app/shared/templates/admin-layout";
 import { StatusPill } from "#app/shared/templates/status-pill";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@elements/ui/tabs";
+import { Alert } from "@elements/ui/alert";
+import { toast } from "@elements/ui/toast";
 import {
   Comment,
   Favorite,
@@ -37,7 +39,6 @@ interface Ui {
   inviting: boolean;
   inviteNote: string;
   inviteError: string;
-  toast: string;
   files: File[];
   uploading: boolean;
   uploaded: number;
@@ -130,24 +131,19 @@ interface Page {
   photos: Photo[];
 }
 
-function onPageInit(page: Page, events: Listener<GalleryEvent>, ui: Ui) {
+function onPageInit(page: Page, events: Listener<GalleryEvent>) {
   events.on("notify", (e) => {
     page.gallery.status = e.status;
 
     if (e.status === "submitted") {
       page.gallery.submittedAt = e.at;
-      showToast(ui, `${page.gallery.clientName || "Your client"} just sent their selections.`);
+      toast("New selections", {
+        description: `${page.gallery.clientName || "Your client"} just sent their selections.`,
+        icon: "heart",
+        duration: 6000,
+      });
     }
   });
-}
-
-function showToast(ui: Ui, text: string) {
-  ui.toast = text;
-  setTimeout(() => {
-    if (ui.toast === text) {
-      ui.toast = "";
-    }
-  }, 6000);
 }
 
 function photoFor(page: Page, id: string): Photo | undefined {
@@ -310,10 +306,10 @@ function timeAgo(d: Date | null): string {
   private page: Page = initial,
   private invite: Invite = { clientName: initial.gallery.clientName, clientEmail: initial.gallery.clientEmail, password: "", message: "" },
   private ui: Ui = {
-    tab: (favorites.length > 0 ? "favorites" : "photos") as Tab, copied: "", inviting: false, inviteNote: "", inviteError: "", toast: "",
+    tab: (favorites.length > 0 ? "favorites" : "photos") as Tab, copied: "", inviting: false, inviteNote: "", inviteError: "",
     files: [] as File[], uploading: false, uploaded: 0, uploadTotal: 0, uploadError: "",
   },
-) oninit={() => onPageInit(page, events, ui)}>
+) oninit={() => onPageInit(page, events)}>
   <head>
     <title>{page.gallery.name} · proofloft</title>
     <link rel="icon" type="image/svg+xml" href={favicon} />
@@ -410,7 +406,7 @@ function timeAgo(d: Date | null): string {
               <form class="upload-drop" onsubmit={() => onUpload(page, ui)}>
                 <strong>Add photos</strong>
                 <input type="file" multiple accept="image/jpeg,image/png,image/webp" value={ui.files} disabled={ui.uploading}>
-                <p e:if={ui.uploadError} class="error" role="alert">{ui.uploadError}</p>
+                <Alert e:if={ui.uploadError} variant="danger" description={ui.uploadError} />
                 <progress e:if={ui.uploading} max={ui.uploadTotal} value={ui.uploaded}></progress>
                 <button type="submit" class={["is-primary", "is-sm", ui.uploading && "is-loading"]} disabled={ui.uploading || ui.files.length === 0}>
                   {ui.uploading ? `Uploading ${ui.uploaded} of ${ui.uploadTotal}` : `Upload ${plural(ui.files.length, "photo")}`}
@@ -458,8 +454,8 @@ function timeAgo(d: Date | null): string {
                     <label for="invite-message">Note <span class="hint">optional</span></label>
                     <textarea id="invite-message" value={invite.message} placeholder="It was such a joy photographing you two…"></textarea>
                   </div>
-                  <p e:if={ui.inviteError} class="error" role="alert">{ui.inviteError}</p>
-                  <p e:if={ui.inviteNote} class="hint" role="status">✓ {ui.inviteNote}</p>
+                  <Alert e:if={ui.inviteError} variant="danger" description={ui.inviteError} />
+                  <Alert e:if={ui.inviteNote} variant="success" role="status" description={ui.inviteNote} />
                   <button type="submit" class={["is-primary", "is-block", ui.inviting && "is-loading"]} disabled={ui.inviting}>
                     {page.gallery.sharedAt ? "Email the link again" : "Email link to client"}
                   </button>
@@ -469,11 +465,6 @@ function timeAgo(d: Date | null): string {
             </div>
           </aside>
         </div>
-      </div>
-
-      <div e:if={ui.toast} class="ag-toast callout is-accent" role="status">
-        <div class="callout-title">♥ New selections</div>
-        <div class="callout-body">{ui.toast}</div>
       </div>
     </AdminLayout>
   </body>

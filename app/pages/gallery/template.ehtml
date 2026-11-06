@@ -419,7 +419,7 @@ function timeAgo(d: Date): string {
           <p class="hint">{formatDate(locked.eventDate)}</p>
         </div>
         <form class="stack is-md" onsubmit={() => onUnlock(token, access)}>
-          <p e:if={access.error} class="error" role="alert">{access.error}</p>
+          <Alert e:if={access.error} variant="danger" description={access.error} />
           <div class="field">
             <label for="gallery-password">Gallery password</label>
             <input id="gallery-password" type="password" value={access.password} autocomplete="current-password" required>
@@ -465,18 +465,15 @@ function timeAgo(d: Date): string {
           {view.status === "final" ? "Final" : "Preview"}
         </span>
       </div>
-      <div e:if={view.preview} class="gallery-banner is-preview row">
-        You are previewing this gallery as the photographer. Hearts and comments are read-only here.
-      </div>
-      <div e:elseif={view.status === "final"} class="gallery-banner is-final row">
-        {view.photographer} has finalized your selections. Thank you!
-      </div>
-      <div e:elseif={view.status === "submitted"} class="gallery-banner row">
-        Selections sent to {view.photographer}. You can keep changing them and send an update until they are final.
-      </div>
     </div>
 
     <main>
+      <Alert e:if={view.preview} variant="warning" role="status" class="gallery-banner"
+             description="You are previewing this gallery as the photographer. Hearts and comments are read-only here." />
+      <Alert e:elseif={view.status === "final"} variant="success" role="status" class="gallery-banner"
+             description={`${view.photographer} has finalized your selections. Thank you!`} />
+      <Alert e:elseif={view.status === "submitted"} variant="accent" role="status" class="gallery-banner"
+             description={`Selections sent to ${view.photographer}. You can keep changing them and send an update until they are final.`} />
       <ul e:if={visiblePhotos(view, ui).length > 0} class="photo-grid">
         <PhotoTile e:for={photo of visiblePhotos(view, ui)} {photo} {view} {ui} />
       </ul>
