@@ -147,7 +147,7 @@
   justify-content: space-between;
   padding: var(--space-5) var(--space-2) var(--space-1-5);
   background: linear-gradient(to bottom, transparent, rgb(0 0 0 / 0.55));
-  color: #fff;
+  color: var(--white);
   font-size: var(--text-xs);
 }
 

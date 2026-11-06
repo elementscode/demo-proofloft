@@ -32,7 +32,7 @@
   font-family: var(--display-font);
   font-size: var(--text-2xl);
   line-height: var(--leading-snug);
-  color: #fff;
+  color: var(--white);
   text-shadow: 0 1px 12px rgb(0 0 0 / 0.45);
   max-width: 26rem;
 }

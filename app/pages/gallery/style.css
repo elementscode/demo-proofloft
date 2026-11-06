@@ -30,7 +30,7 @@
   z-index: 1;
   inset: auto 0 0 0;
   padding: var(--space-10) var(--space-8);
-  color: #fff;
+  color: var(--white);
   text-align: center;
   text-shadow: 0 1px 14px rgb(0 0 0 / 0.35);
 }
@@ -46,7 +46,7 @@
   font-weight: var(--weight-semibold);
   line-height: var(--leading-tight);
   letter-spacing: -0.015em;
-  color: #fff;
+  color: var(--white);
   text-wrap: balance;
 }
 
@@ -140,7 +140,7 @@
   justify-content: space-between;
   padding: var(--space-6) var(--space-2) var(--space-2) var(--space-3);
   background: linear-gradient(to bottom, transparent, rgb(0 0 0 / 0.45));
-  color: #fff;
+  color: var(--white);
   font-size: var(--text-xs);
   opacity: 0;
   transition: var(--transition-opacity);
@@ -176,7 +176,7 @@
   border-radius: var(--radius-full);
   background: rgb(0 0 0 / 0.28);
   box-shadow: none;
-  color: #fff;
+  color: var(--white);
 }
 
 .heart-button:hover {
@@ -189,7 +189,7 @@
 
 .heart-button.is-on {
   color: var(--heart);
-  background: #fff;
+  background: var(--white);
 }
 
 .heart-button.is-on svg {
@@ -226,8 +226,8 @@
   z-index: var(--z-modal);
   display: grid;
   grid-template-columns: minmax(0, 1fr) 24rem;
-  background: #0d0b0a;
-  color: #f4efe9;
+  background: color-mix(in oklab, var(--brand-950) 35%, var(--black));
+  color: var(--brand-50);
   outline: none;
   animation: lightbox-in var(--duration-normal) var(--ease-out);
 }
@@ -266,7 +266,7 @@
   border-radius: var(--radius-full);
   background: rgb(255 255 255 / 0.08);
   box-shadow: none;
-  color: #fff;
+  color: var(--white);
 }
 
 .lightbox-nav:hover {
@@ -289,7 +289,7 @@
   border: 0;
   background: rgb(255 255 255 / 0.08);
   box-shadow: none;
-  color: #fff;
+  color: var(--white);
 }
 
 .lightbox-close:hover {
@@ -311,7 +311,7 @@
   flex-direction: column;
   min-height: 0;
   border-left: 1px solid rgb(255 255 255 / 0.08);
-  background: #16130f;
+  background: color-mix(in oklab, var(--brand-950) 65%, var(--black));
 }
 
 .lightbox-panel-head {
@@ -334,7 +334,7 @@
   border-radius: var(--radius-full);
   background: transparent;
   box-shadow: none;
-  color: #fff;
+  color: var(--white);
 }
 
 .lightbox-heart:hover {
@@ -345,7 +345,7 @@
 .lightbox-heart.is-on {
   border-color: var(--heart);
   background: var(--heart);
-  color: #fff;
+  color: var(--white);
 }
 
 .lightbox-heart.is-on svg {
@@ -381,7 +381,7 @@
 .comment-author {
   gap: var(--space-2);
   font-weight: var(--weight-semibold);
-  color: #fff;
+  color: var(--white);
 }
 
 .comment-time {
@@ -411,7 +411,7 @@
   min-height: 4.5rem;
   border-color: rgb(255 255 255 / 0.16);
   background: rgb(255 255 255 / 0.05);
-  color: #fff;
+  color: var(--white);
 }
 
 .lightbox-compose textarea::placeholder {
