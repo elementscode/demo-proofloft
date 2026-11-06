@@ -16,8 +16,6 @@
     --accent-soft: var(--brand-50);
     --accent-ink: var(--white);
     --accent-edge: var(--brand-200);
-    --link-c: 0.123;
-    --link-h: 42;
     --heart: oklch(0.62 0.21 18);
     --heart-soft: oklch(0.95 0.035 18);
     --display-font: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
