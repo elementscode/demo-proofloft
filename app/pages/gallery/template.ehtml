@@ -32,6 +32,8 @@ import { Tabs, TabsList, TabsTrigger } from "@elements/ui/tabs";
 import { AlertDialog, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@elements/ui/alert-dialog";
 import { Alert } from "@elements/ui/alert";
 import { Button } from "@elements/ui/button";
+import { focusScope, lockScroll, pushLayer } from "@elements/ui/behaviors";
+import type { FocusScope, Layer } from "@elements/ui/behaviors";
 
 export interface LockedGallery {
   name: string;
@@ -64,6 +66,13 @@ interface Ui {
   error: string;
   confirming: boolean;
   sending: boolean;
+}
+
+/** The behaviors the lightbox holds while it is open. */
+interface LightboxHold {
+  scope?: FocusScope;
+  layer?: Layer;
+  unlock?: () => void;
 }
 
 interface Access {
@@ -275,12 +284,21 @@ function onStep(view: ClientView, ui: Ui, delta: number) {
   onOpen(ui, list[next].id);
 }
 
-function onLightboxKey(e: KeyboardEvent, view: ClientView, ui: Ui) {
-  if (e.key === "Escape") {
-    ui.openId = null;
-    return;
-  }
+function onLightboxInsert(e: LifecycleEvent, ui: Ui, hold: LightboxHold) {
+  let el = e.target as HTMLElement;
 
+  hold.unlock = lockScroll();
+  hold.layer = pushLayer(el, { onDismiss: () => ui.openId = null, outside: false });
+  hold.scope = focusScope(el, { trap: true, initialFocus: el });
+}
+
+function onLightboxRemove(hold: LightboxHold) {
+  hold.scope?.release();
+  hold.layer?.release();
+  hold.unlock?.();
+}
+
+function onLightboxKey(e: KeyboardEvent, view: ClientView, ui: Ui) {
   let target = e.target as HTMLElement;
 
   if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") {
@@ -347,9 +365,6 @@ function confirmText(view: ClientView): string {
   return `You haven't hearted any photos yet. You can still send your comments to ${view.photographer}.`;
 }
 
-function focusSelf(e: LifecycleEvent) {
-  (e.target as HTMLElement).focus();
-}
 
 function timeAgo(d: Date): string {
   let s = Math.max(0, (Date.now() - +new Date(d)) / 1000);
@@ -521,9 +536,10 @@ function timeAgo(d: Date): string {
   </li>
 </PhotoTile>
 
-<Lightbox (view: ClientView, ui: Ui)>
+<Lightbox (view: ClientView, ui: Ui, private hold: LightboxHold = {})>
   <div class="lightbox" tabindex={-1} role="dialog" aria-modal="true" aria-label="Photo viewer"
-       oninsert={focusSelf} onkeydown={(e) => onLightboxKey(e, view, ui)}>
+       oninsert={(e) => onLightboxInsert(e, ui, hold)} onremove={() => onLightboxRemove(hold)}
+       onkeydown={(e) => onLightboxKey(e, view, ui)}>
     <LightboxBody e:for={photo of view.photos.filter((p) => p.id === ui.openId)} {photo} {view} {ui} />
   </div>
 </Lightbox>
