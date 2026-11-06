@@ -53,7 +53,6 @@ export function createGallery(form: NewGallery): string {
   `).firstOrThrow().id;
 }
 
-
 async function onSubmit(form: Form) {
   form.saving = true;
   form.error = "";
@@ -113,33 +112,33 @@ function today(): string {
                 <Field label="Gallery name">
                   <Input value={form.name} placeholder="Harper & Theo · Engagement" required />
                 </Field>
-  
+
                 <Field label="Session date">
                   <DatePicker value={form.eventDate} required block />
                 </Field>
-  
+
                 <Field>
                   <FieldLabel>Client name <span class="hint">optional</span></FieldLabel>
                   <Input value={form.clientName} placeholder="Harper Lin" />
                 </Field>
-  
+
                 <Field>
                   <FieldLabel>Client email <span class="hint">optional</span></FieldLabel>
                   <Input type="email" value={form.clientEmail} placeholder="harper@example.com"
                          attrs={{ autocapitalize: "none", spellcheck: "false" }} />
                 </Field>
-  
+
                 <Field>
                   <FieldLabel>Gallery password <span class="hint">optional</span></FieldLabel>
                   <Input value={form.password} placeholder="Leave blank to share by link only" attrs={{ autocomplete: "off" }} />
                 </Field>
-  
+
                 <Field label="Photos">
                   <FileUpload files={form.files} accept={["image/jpeg", "image/png", "image/webp"]} maxFiles={Infinity}
                               maxFileSize={25_000_000} disabled={form.saving}
                               hint="Select as many as you like. JPEG, PNG or WebP, up to 25 MB each." />
                 </Field>
-  
+
                 <Alert e:if={form.error} variant="danger" description={form.error} />
                 <Progress e:if={form.saving && form.files.length > 0} value={form.uploaded} max={form.files.length} label="Uploading" showValue
                           getValueLabel={(v, max) => `${v} of ${max}`} />

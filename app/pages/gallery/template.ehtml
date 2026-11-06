@@ -370,7 +370,6 @@ function confirmText(view: ClientView): string {
   return `You haven't hearted any photos yet. You can still send your comments to ${view.photographer}.`;
 }
 
-
 function timeAgo(d: Date): string {
   let s = Math.max(0, (Date.now() - +new Date(d)) / 1000);
 
@@ -522,8 +521,8 @@ function timeAgo(d: Date): string {
     </button>
     <div class="photo-tile-bar row">
       <span class="photo-tile-name">{photo.name}</span>
-      <span class="row is-sm photo-tile-comments cluster">
-        <span e:if={commentsFor(view, photo.id).length > 0} class="row is-xs photo-tile-count" aria-label="Comments"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg> {commentsFor(view, photo.id).length}</span>
+      <span class="row photo-tile-comments">
+        <span e:if={commentsFor(view, photo.id).length > 0} class="row photo-tile-count" aria-label="Comments"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg> {commentsFor(view, photo.id).length}</span>
         <button class={["heart-button", isFavorite(view, photo.id) && "is-on"]}
                 aria-pressed={isFavorite(view, photo.id)}
                 aria-label={isFavorite(view, photo.id) ? "Remove from favorites" : "Add to favorites"}
