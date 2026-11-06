@@ -6,6 +6,8 @@
 
 Private photo galleries where clients heart favorites and comment live, and the photographer downloads the chosen file names.
 
+Proofloft uses the `luxury` theme from @elements/ui.
+
 [Run this app on your machine](https://elements.dev/demos/01a0f424-a33a-7f14-94c0-cfe190131ec9). Use this demo as inspiration, or as the starting point for your own app. Your agent creates a new app with this one as the scaffold, and you prompt it to add whatever features you want.
 
 ## How it's built
