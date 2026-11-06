@@ -524,6 +524,16 @@
     display: none;
   }
 
+  .gallery-toolbar-inner {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  .gallery-filter {
+    order: -1;
+    flex-basis: 100%;
+  }
+
 
   .photo-grid {
     gap: 3px;
