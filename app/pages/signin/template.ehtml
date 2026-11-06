@@ -6,6 +6,8 @@ import { Brand } from "#app/shared/templates/brand";
 import { signin } from "#app/shared/services/auth";
 import { Alert, AlertTitle, AlertDescription } from "@elements/ui/alert";
 import { Button } from "@elements/ui/button";
+import { Field } from "@elements/ui/field";
+import { Input } from "@elements/ui/input";
 
 export const DEMO_EMAIL = "nora@proofloft.studio";
 export const DEMO_PASSWORD = "proofloft";
@@ -58,28 +60,15 @@ function onUseDemo(form: SigninForm) {
 
           <Alert e:if={form.error} variant="danger" description={form.error} />
 
-          <div class="field">
-            <label for="email">Email</label>
-            <input id="email"
-                   name="email"
-                   type="email"
-                   value={form.email}
-                   autocomplete="email"
-                   autocapitalize="none"
-                   spellcheck={false}
-                   placeholder="you@studio.com"
-                   required>
-          </div>
+          <Field label="Email">
+            <Input name="email" type="email" value={form.email} placeholder="you@studio.com" required
+                   attrs={{ autocomplete: "email", autocapitalize: "none", spellcheck: "false" }} />
+          </Field>
 
-          <div class="field">
-            <label for="password">Password</label>
-            <input id="password"
-                   name="password"
-                   type="password"
-                   value={form.password}
-                   autocomplete="current-password"
-                   required>
-          </div>
+          <Field label="Password">
+            <Input name="password" type="password" value={form.password} required
+                   attrs={{ autocomplete: "current-password" }} />
+          </Field>
 
           <Button type="submit" variant="primary" block>Sign in</Button>
 
