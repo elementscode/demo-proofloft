@@ -28,6 +28,7 @@ import {
   plural,
 } from "#app/shared/services/galleries";
 import SelectionsSubmittedEmail from "#app/emails/selections-submitted";
+import { Tabs, TabsList, TabsTrigger } from "@elements/ui/tabs";
 
 export interface LockedGallery {
   name: string;
@@ -419,14 +420,12 @@ function timeAgo(d: Date): string {
     <div class="gallery-toolbar">
       <div class="gallery-toolbar-inner row">
         <span class="gallery-toolbar-title truncate">{view.name}</span>
-        <div class="gallery-filter" role="tablist">
-          <button role="tab" class={[ui.filter === "all" && "is-active"]} onclick={() => ui.filter = "all"}>
-            All {view.photos.length}
-          </button>
-          <button role="tab" class={[ui.filter === "favorites" && "is-active"]} onclick={() => ui.filter = "favorites"}>
-            <span class="heart-count">♥</span> Favorites {view.favorites.length}
-          </button>
-        </div>
+        <Tabs value={ui.filter} variant="segmented" class="gallery-filter">
+          <TabsList label="Show">
+            <TabsTrigger value="all">All {view.photos.length}</TabsTrigger>
+            <TabsTrigger value="favorites"><span class="heart-count">♥</span> Favorites {view.favorites.length}</TabsTrigger>
+          </TabsList>
+        </Tabs>
         <button e:if={!isLocked(view)} class="is-primary is-sm" onclick={() => ui.confirming = true}>
           {view.status === "submitted" ? "Send update" : "Submit selections"}
         </button>

@@ -328,11 +328,3 @@
   font-variant-numeric: tabular-nums;
 }
 
-.page-admin-gallery .tab-list {
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.page-admin-gallery .tab {
-  white-space: nowrap;
-}

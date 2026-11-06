@@ -4,6 +4,7 @@ import type { Listener } from "@elements/app";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { AdminLayout } from "#app/shared/templates/admin-layout";
 import { StatusPill } from "#app/shared/templates/status-pill";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@elements/ui/tabs";
 import {
   Comment,
   Favorite,
@@ -368,66 +369,58 @@ function timeAgo(d: Date | null): string {
         </div>
 
         <div class="ag-layout">
-          <div class="tabs">
-            <div class="tab-list" role="tablist">
-              <button role="tab" class={["tab", ui.tab === "favorites" && "is-active"]} onclick={() => ui.tab = "favorites"}>
-                Favorites ({favorites.length})
-              </button>
-              <button role="tab" class={["tab", ui.tab === "comments" && "is-active"]} onclick={() => ui.tab = "comments"}>
-                Comments ({comments.length})
-              </button>
-              <button role="tab" class={["tab", ui.tab === "photos" && "is-active"]} onclick={() => ui.tab = "photos"}>
-                All photos ({page.photos.length})
-              </button>
-            </div>
+          <Tabs value={ui.tab}>
+            <TabsList label="Gallery activity">
+              <TabsTrigger value="favorites">Favorites ({favorites.length})</TabsTrigger>
+              <TabsTrigger value="comments">Comments ({comments.length})</TabsTrigger>
+              <TabsTrigger value="photos">All photos ({page.photos.length})</TabsTrigger>
+            </TabsList>
 
-            <div class="tab-panel stack is-lg" e:switch={ui.tab}>
-              <div e:case="favorites" class="stack is-lg">
-                <div e:if={favorites.length > 0} class="stack is-md">
-                  <ul class="ag-grid is-favorites">
-                    <AdminTile e:for={photo of favoritePhotos(page, favorites)} {photo} favorite={true} comments={commentCount(comments, photo.id)} />
-                  </ul>
-                  <div class="stack is-sm">
-                    <div class="row cluster" style="justify-content: space-between">
-                      <strong class="text-sm">Chosen file names</strong>
-                      <button class="is-sm is-ghost" onclick={() => onCopy(ui, favoritePhotos(page, favorites).map((p) => p.name).join(", "), "names")}>
-                        {ui.copied === "names" ? "Copied" : "Copy for Lightroom"}
-                      </button>
-                    </div>
-                    <div class="ag-files">{favoritePhotos(page, favorites).map((p) => p.name).join(", ")}</div>
-                  </div>
-                </div>
-                <div e:else class="ag-empty">
-                  No favorites yet. They appear here the moment your client hearts a photo.
-                </div>
-              </div>
-
-              <div e:case="comments" class="stack">
-                <div e:if={comments.length > 0}>
-                  <CommentThread e:for={t of threads(page, comments)} thread={t} {comments}
-                                 favorite={isFavorite(favorites, t.photo.id)} clientName={page.gallery.clientName} />
-                </div>
-                <div e:else class="ag-empty">
-                  No comments yet. Your client can leave one on any photo from the lightbox.
-                </div>
-              </div>
-
-              <div e:case="photos" class="stack is-lg">
-                <form class="upload-drop" onsubmit={() => onUpload(page, ui)}>
-                  <strong>Add photos</strong>
-                  <input type="file" multiple accept="image/jpeg,image/png,image/webp" value={ui.files} disabled={ui.uploading}>
-                  <p e:if={ui.uploadError} class="error" role="alert">{ui.uploadError}</p>
-                  <progress e:if={ui.uploading} max={ui.uploadTotal} value={ui.uploaded}></progress>
-                  <button type="submit" class={["is-primary", "is-sm", ui.uploading && "is-loading"]} disabled={ui.uploading || ui.files.length === 0}>
-                    {ui.uploading ? `Uploading ${ui.uploaded} of ${ui.uploadTotal}` : `Upload ${plural(ui.files.length, "photo")}`}
-                  </button>
-                </form>
-                <ul class="ag-grid">
-                  <AdminTile e:for={photo of page.photos} {photo} favorite={isFavorite(favorites, photo.id)} comments={commentCount(comments, photo.id)} />
+            <TabsContent value="favorites" class="stack is-lg">
+              <div e:if={favorites.length > 0} class="stack is-md">
+                <ul class="ag-grid is-favorites">
+                  <AdminTile e:for={photo of favoritePhotos(page, favorites)} {photo} favorite={true} comments={commentCount(comments, photo.id)} />
                 </ul>
+                <div class="stack is-sm">
+                  <div class="row cluster" style="justify-content: space-between">
+                    <strong class="text-sm">Chosen file names</strong>
+                    <button class="is-sm is-ghost" onclick={() => onCopy(ui, favoritePhotos(page, favorites).map((p) => p.name).join(", "), "names")}>
+                      {ui.copied === "names" ? "Copied" : "Copy for Lightroom"}
+                    </button>
+                  </div>
+                  <div class="ag-files">{favoritePhotos(page, favorites).map((p) => p.name).join(", ")}</div>
+                </div>
               </div>
-            </div>
-          </div>
+              <div e:else class="ag-empty">
+                No favorites yet. They appear here the moment your client hearts a photo.
+              </div>
+            </TabsContent>
+
+            <TabsContent value="comments" class="stack">
+              <div e:if={comments.length > 0}>
+                <CommentThread e:for={t of threads(page, comments)} thread={t} {comments}
+                               favorite={isFavorite(favorites, t.photo.id)} clientName={page.gallery.clientName} />
+              </div>
+              <div e:else class="ag-empty">
+                No comments yet. Your client can leave one on any photo from the lightbox.
+              </div>
+            </TabsContent>
+
+            <TabsContent value="photos" class="stack is-lg">
+              <form class="upload-drop" onsubmit={() => onUpload(page, ui)}>
+                <strong>Add photos</strong>
+                <input type="file" multiple accept="image/jpeg,image/png,image/webp" value={ui.files} disabled={ui.uploading}>
+                <p e:if={ui.uploadError} class="error" role="alert">{ui.uploadError}</p>
+                <progress e:if={ui.uploading} max={ui.uploadTotal} value={ui.uploaded}></progress>
+                <button type="submit" class={["is-primary", "is-sm", ui.uploading && "is-loading"]} disabled={ui.uploading || ui.files.length === 0}>
+                  {ui.uploading ? `Uploading ${ui.uploaded} of ${ui.uploadTotal}` : `Upload ${plural(ui.files.length, "photo")}`}
+                </button>
+              </form>
+              <ul class="ag-grid">
+                <AdminTile e:for={photo of page.photos} {photo} favorite={isFavorite(favorites, photo.id)} comments={commentCount(comments, photo.id)} />
+              </ul>
+            </TabsContent>
+          </Tabs>
 
           <aside class="ag-side stack is-lg">
             <div class="card">

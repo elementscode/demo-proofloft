@@ -77,30 +77,6 @@
   font-weight: var(--weight-semibold);
 }
 
-.gallery-filter {
-  display: inline-flex;
-  padding: 3px;
-  border-radius: var(--radius-full);
-  background: var(--bg-muted);
-}
-
-.gallery-filter button {
-  height: 2rem;
-  padding-inline: var(--space-4);
-  border: 0;
-  border-radius: var(--radius-full);
-  background: transparent;
-  box-shadow: none;
-  color: var(--ink-soft);
-  font-size: var(--text-sm);
-}
-
-.gallery-filter button.is-active {
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-xs);
-  color: var(--ink);
-}
-
 .gallery-filter .heart-count {
   color: var(--heart);
 }
@@ -592,9 +568,6 @@
     display: none;
   }
 
-  .gallery-filter button {
-    padding-inline: var(--space-3);
-  }
 
   .photo-grid {
     gap: 3px;
