@@ -424,9 +424,7 @@ function timeAgo(d: Date): string {
             <label for="gallery-password">Gallery password</label>
             <input id="gallery-password" type="password" value={access.password} autocomplete="current-password" required>
           </div>
-          <button type="submit" class={["is-primary", "is-block", access.checking && "is-loading"]} disabled={access.checking}>
-            View gallery
-          </button>
+          <Button type="submit" variant="primary" block loading={access.checking}>View gallery</Button>
         </form>
       </div>
     </div>
@@ -480,7 +478,7 @@ function timeAgo(d: Date): string {
       <div e:else class="gallery-empty stack is-sm">
         <p><strong>No favorites yet.</strong></p>
         <p>Tap the heart on any photo to add it to your selections.</p>
-        <div><button onclick={() => ui.filter = "all"}>Show all photos</button></div>
+        <div><Button onclick={() => ui.filter = "all"}>Show all photos</Button></div>
       </div>
     </main>
 
@@ -585,7 +583,7 @@ function timeAgo(d: Date): string {
       <textarea value={ui.draft} placeholder="Add a comment…" aria-label="Comment on this photo" maxlength={2000}></textarea>
       <div class="lightbox-compose-actions row">
         <span class="hint">← → to browse · H to heart</span>
-        <button type="submit" class="is-primary is-sm" disabled={!ui.draft.trim()}>Comment</button>
+        <Button type="submit" variant="primary" size="sm" disabled={!ui.draft.trim()}>Comment</Button>
       </div>
     </form>
   </aside>

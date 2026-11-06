@@ -81,7 +81,7 @@ function onUseDemo(form: SigninForm) {
                    required>
           </div>
 
-          <button type="submit" class="is-primary is-block">Sign in</button>
+          <Button type="submit" variant="primary" block>Sign in</Button>
 
           <Alert variant="accent" role="none" class="signin-demo">
             <AlertTitle>Demo photographer</AlertTitle>

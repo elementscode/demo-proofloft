@@ -5,6 +5,8 @@ import { AdminLayout } from "#app/shared/templates/admin-layout";
 import { plural } from "#app/shared/services/galleries";
 import { readDimensions, uploadPhotos } from "#app/shared/services/uploads";
 import { Alert } from "@elements/ui/alert";
+import { Button } from "@elements/ui/button";
+import { Progress } from "@elements/ui/progress";
 
 export interface NewGallery {
   name: string;
@@ -140,16 +142,15 @@ function today(): string {
             </div>
 
             <Alert e:if={form.error} variant="danger" description={form.error} />
-            <progress e:if={form.saving && form.files.length > 0} max={form.files.length} value={form.uploaded}></progress>
+            <Progress e:if={form.saving && form.files.length > 0} value={form.uploaded} max={form.files.length} label="Uploading" showValue
+                      getValueLabel={(v, max) => `${v} of ${max}`} />
           </div>
 
           <div class="card-foot new-gallery-actions cluster">
-            <a class="button is-ghost" href="/admin">Cancel</a>
-            <button type="submit" class={["is-primary", form.saving && "is-loading"]} disabled={form.saving}>
-              {form.saving
-                ? (form.files.length > 0 ? `Uploading ${form.uploaded} of ${form.files.length}` : "Creating")
-                : (form.files.length > 0 ? `Create with ${plural(form.files.length, "photo")}` : "Create gallery")}
-            </button>
+            <Button href="/admin" variant="ghost">Cancel</Button>
+            <Button type="submit" variant="primary" loading={form.saving}>
+              {form.files.length > 0 ? `Create with ${plural(form.files.length, "photo")}` : "Create gallery"}
+            </Button>
           </div>
         </form>
       </div>

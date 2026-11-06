@@ -7,6 +7,8 @@ import { StatusPill } from "#app/shared/templates/status-pill";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@elements/ui/tabs";
 import { Alert } from "@elements/ui/alert";
 import { toast } from "@elements/ui/toast";
+import { Button } from "@elements/ui/button";
+import { Progress } from "@elements/ui/progress";
 import {
   Comment,
   Favorite,
@@ -332,14 +334,14 @@ function timeAgo(d: Date | null): string {
             </span>
           </div>
           <div class="cluster is-sm">
-            <a class="button" href={`/g/${page.gallery.shareToken}`} target="_blank" rel="noopener">Preview as client</a>
-            <a e:if={favorites.length > 0} class="button" href={`/admin/galleries/${page.gallery.id}/selections.txt`} download>
+            <Button href={`/g/${page.gallery.shareToken}`} attrs={{ target: "_blank", rel: "noopener" }}>Preview as client</Button>
+            <Button e:if={favorites.length > 0} href={`/admin/galleries/${page.gallery.id}/selections.txt`} attrs={{ download: true }}>
               Download selections
-            </a>
-            <button e:if={page.gallery.status !== "final"} class="is-primary" onclick={() => onSetFinal(page, true)}>
+            </Button>
+            <Button e:if={page.gallery.status !== "final"} variant="primary" onclick={() => onSetFinal(page, true)}>
               Mark selections final
-            </button>
-            <button e:else onclick={() => onSetFinal(page, false)}>Reopen selections</button>
+            </Button>
+            <Button e:else onclick={() => onSetFinal(page, false)}>Reopen selections</Button>
           </div>
         </div>
 
@@ -380,9 +382,9 @@ function timeAgo(d: Date | null): string {
                 <div class="stack is-sm">
                   <div class="row cluster" style="justify-content: space-between">
                     <strong class="text-sm">Chosen file names</strong>
-                    <button class="is-sm is-ghost" onclick={() => onCopy(ui, favoritePhotos(page, favorites).map((p) => p.name).join(", "), "names")}>
+                    <Button variant="ghost" size="sm" onclick={() => onCopy(ui, favoritePhotos(page, favorites).map((p) => p.name).join(", "), "names")}>
                       {ui.copied === "names" ? "Copied" : "Copy for Lightroom"}
-                    </button>
+                    </Button>
                   </div>
                   <div class="ag-files">{favoritePhotos(page, favorites).map((p) => p.name).join(", ")}</div>
                 </div>
@@ -407,10 +409,11 @@ function timeAgo(d: Date | null): string {
                 <strong>Add photos</strong>
                 <input type="file" multiple accept="image/jpeg,image/png,image/webp" value={ui.files} disabled={ui.uploading}>
                 <Alert e:if={ui.uploadError} variant="danger" description={ui.uploadError} />
-                <progress e:if={ui.uploading} max={ui.uploadTotal} value={ui.uploaded}></progress>
-                <button type="submit" class={["is-primary", "is-sm", ui.uploading && "is-loading"]} disabled={ui.uploading || ui.files.length === 0}>
-                  {ui.uploading ? `Uploading ${ui.uploaded} of ${ui.uploadTotal}` : `Upload ${plural(ui.files.length, "photo")}`}
-                </button>
+                <Progress e:if={ui.uploading} class="upload-progress" value={ui.uploaded} max={ui.uploadTotal} label="Uploading" showValue
+                          getValueLabel={(v, max) => `${v} of ${max}`} />
+                <Button type="submit" variant="primary" size="sm" loading={ui.uploading} disabled={ui.files.length === 0}>
+                  Upload {plural(ui.files.length, "photo")}
+                </Button>
               </form>
               <ul class="ag-grid">
                 <AdminTile e:for={photo of page.photos} {photo} favorite={isFavorite(favorites, photo.id)} comments={commentCount(comments, photo.id)} />
@@ -426,14 +429,14 @@ function timeAgo(d: Date | null): string {
                   <label for="share-link">Private link</label>
                   <div class="share-link row">
                     <input id="share-link" readonly value={`/g/${page.gallery.shareToken}`} onfocus={(e) => (e.target as HTMLInputElement).select()}>
-                    <button class="is-sm" onclick={() => onCopy(ui, shareUrl(page.gallery), "link")}>{ui.copied === "link" ? "Copied" : "Copy"}</button>
+                    <Button size="sm" onclick={() => onCopy(ui, shareUrl(page.gallery), "link")}>{ui.copied === "link" ? "Copied" : "Copy"}</Button>
                   </div>
                 </div>
 
                 <div class="cluster is-sm text-sm">
                   <span e:if={page.gallery.hasPassword} class="pill is-accent">Password protected</span>
                   <span e:else class="pill">No password</span>
-                  <button e:if={page.gallery.hasPassword} class="is-ghost is-sm" onclick={() => onRemovePassword(page)}>Remove</button>
+                  <Button e:if={page.gallery.hasPassword} variant="link" size="sm" onclick={() => onRemovePassword(page)}>Remove</Button>
                 </div>
 
                 <form class="stack is-sm" onsubmit={() => onInvite(page, invite, ui)}>
@@ -456,9 +459,9 @@ function timeAgo(d: Date | null): string {
                   </div>
                   <Alert e:if={ui.inviteError} variant="danger" description={ui.inviteError} />
                   <Alert e:if={ui.inviteNote} variant="success" role="status" description={ui.inviteNote} />
-                  <button type="submit" class={["is-primary", "is-block", ui.inviting && "is-loading"]} disabled={ui.inviting}>
+                  <Button type="submit" variant="primary" block loading={ui.inviting}>
                     {page.gallery.sharedAt ? "Email the link again" : "Email link to client"}
-                  </button>
+                  </Button>
                   <p e:if={page.gallery.sharedAt} class="hint">Last sent {timeAgo(page.gallery.sharedAt)}.</p>
                 </form>
               </div>
@@ -506,7 +509,7 @@ function timeAgo(d: Date | null): string {
       </div>
       <form class="thread-reply row" onsubmit={() => onReply(comments, draft, thread.photo.id)}>
         <input class="is-sm" value={draft.value} placeholder="Reply…" aria-label={`Reply about ${thread.photo.name}`}>
-        <button type="submit" class="is-sm">Reply</button>
+        <Button type="submit" size="sm">Reply</Button>
       </form>
     </div>
   </div>

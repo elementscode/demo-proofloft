@@ -3,6 +3,7 @@ import { redirect, session } from "@elements/app";
 import { Brand } from "#app/shared/templates/brand";
 import { signout } from "#app/shared/services/auth";
 import { Toaster } from "@elements/ui/toast";
+import { Button } from "@elements/ui/button";
 
 function onSignout() {
   signout();
@@ -22,7 +23,7 @@ function onSignout() {
         </div>
         <div class="admin-user cluster is-md">
           <span class="admin-user-name">{session.get("userName")}</span>
-          <button class="is-ghost is-sm" onclick={() => onSignout()}>Sign out</button>
+          <Button variant="ghost" size="sm" onclick={() => onSignout()}>Sign out</Button>
         </div>
       </div>
     </header>

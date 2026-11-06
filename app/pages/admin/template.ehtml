@@ -3,6 +3,7 @@ import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { AdminLayout } from "#app/shared/templates/admin-layout";
 import { StatusPill } from "#app/shared/templates/status-pill";
 import { sql } from "@elements/app";
+import { Button } from "@elements/ui/button";
 import { GalleryStatus, PhotoRow, formatDate, photoUrl, plural } from "#app/shared/services/galleries";
 
 export interface GallerySummary {
@@ -60,7 +61,7 @@ export function gallerySummaries(userId: string): GallerySummary[] {
             <p class="eyebrow">Your studio</p>
             <h1>Galleries</h1>
           </div>
-          <a class="button is-primary" href="/admin/galleries/new">New gallery</a>
+          <Button href="/admin/galleries/new" variant="primary">New gallery</Button>
         </div>
 
         <ul e:if={galleries.length > 0} class="gallery-grid">
@@ -90,7 +91,7 @@ export function gallerySummaries(userId: string): GallerySummary[] {
         <div e:else class="galleries-empty stack is-md">
           <h2>No galleries yet</h2>
           <p class="hint">Create one, upload the photos, and send your client the link.</p>
-          <div><a class="button is-primary" href="/admin/galleries/new">New gallery</a></div>
+          <div><Button href="/admin/galleries/new" variant="primary">New gallery</Button></div>
         </div>
       </div>
     </AdminLayout>
