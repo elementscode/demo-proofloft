@@ -91,7 +91,6 @@
   color: var(--heart);
 }
 
-
 @media (max-width: 40rem) {
   .gallery-grid {
     grid-template-columns: 1fr;

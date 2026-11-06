@@ -388,7 +388,7 @@ function timeAgo(d: Date | null): string {
                   <AdminTile e:for={photo of favoritePhotos(page, favorites)} {photo} favorite={true} comments={commentCount(comments, photo.id)} />
                 </ul>
                 <div class="stack is-sm">
-                  <div class="row cluster" style="justify-content: space-between">
+                  <div class="ag-files-head cluster">
                     <strong class="text-sm">Chosen file names</strong>
                     <Button variant="ghost" size="sm" onclick={() => onCopy(ui, favoritePhotos(page, favorites).map((p) => p.name).join(", "), "names")}>
                       {ui.copied === "names" ? "Copied" : "Copy for Lightroom"}
